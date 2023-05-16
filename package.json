@@ -1,12 +1,20 @@
 {
   "name": "loopgpt-js",
-  "version": "0.0.131",
+  "version": "0.0.1381",
   "repository": {
     "type": "git",
     "url": "git://github.com/iskandarreza/loopgpt-js.git"
   },
   "description": "A Javascript implementation of LoopGPT",
   "main": "index.js",
+  "files": [
+    "index.js",
+    "agent.js",
+    "constants.js",
+    "openAIModel.js",
+    "openAIEmbeddingProvider.js",
+    "localMemory.js"
+  ],
   "scripts": {
     "test": "node index.js"
   },
@@ -19,6 +27,8 @@
   "author": "Fariz Rahman, Iskandar Reza",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^20.1.5"
+    "@types/node": "^20.1.5",
+    "jsdoc": "^4.0.2",
+    "typescript": "^5.0.4"
   }
 }

@@ -1,4 +1,5 @@
 // Credits to Fariz Rahman for https://github.com/farizrahman4u/loopgpt
+const { OpenAIModel } = require("./openAIModel.js");
 const {
   AgentStates,
   DEFAULT_AGENT_DESCRIPTION,
@@ -11,35 +12,91 @@ const {
 const { LocalMemory } = require("./localMemory.js");
 const { OpenAIEmbeddingProvider } = require("./openAIEmbeddingProvider.js");
 
+/**
+ * @typedef {Object} AgentConfig
+ * @property {string} [name]
+ * @property {string} [description]
+ * @property {string[]} [goals]
+ * @property {OpenAIModel} [model]
+ * @property {*} [embedding_provider]
+ * @property {number} [temperature]
+ */
+
+// /**
+//  * @typedef {Object} OpenAIModel
+//  * @property {Function} chat - Async method for conducting a chat conversation.
+//  * @property {Function} countTokens - Method for counting the number of tokens in a text string.
+//  * @property {Function} getTokenLimit - Method for getting the token limit of the model.
+//  * @property {Function} config - Method for getting the configuration of the model.
+//  */
+
+
+/**
+ * Creates an instance of a LoopGPT Agent class
+ * @date 5/16/2023 - 9:24:36 AM
+ *
+ * @class Agent
+ * @typedef {Agent}
+ */
+// @ts-ignore
 class Agent {
+  /**
+   * Creates an instance of a LoopGPT Agent.
+   * @date 5/16/2023 - 9:24:36 AM
+   *
+   * @constructor
+   * @param {AgentConfig} config
+   */
   constructor({
     name = DEFAULT_AGENT_NAME,
     description = DEFAULT_AGENT_DESCRIPTION,
-    goals = null,
-    model = null,
+    goals = undefined,
+    model = undefined,
     embedding_provider = null,
     temperature = 0.8,
   } = {}) {
     this.name = name
     this.description = description
     this.goals = goals || []
-    this.model = model || 'gpt-3.5-turbo'
+    this.model = model || new OpenAIModel('gpt-3.5-turbo')
     this.embedding_provider =
       embedding_provider || new OpenAIEmbeddingProvider()
     this.temperature = temperature
     this.memory = new LocalMemory({
       embedding_provider: this.embedding_provider,
     })
+    /**
+     * @type {{ role: string; content: any; }[]}
+     */
     this.history = []
     this.init_prompt = INIT_PROMPT
     this.next_prompt = NEXT_PROMPT
+    /**
+     * @type {any[]}
+     */
     this.progress = []
+    /**
+     * @type {any[]}
+     */
     this.plan = []
+    /**
+     * @type {string | any[]}
+     */
     this.constraints = []
     this.state = AgentStates.START
+    /**
+     * @type {{ [s: string]: any; } | ArrayLike<any>}
+     */
     this.tools = []
   }
 
+  /**
+   * This function returns the last n non-user messages from a chat history, excluding any system
+   * messages that contain the phrase "do_nothing".
+   * @param {number} n - The number of non-user messages to retrieve from the chat history.
+   * @returns This function returns an array of the last n non-user messages from the chat history,
+   * excluding any system messages that contain the phrase "do_nothing".
+   */
   _getNonUserMessages(n) {
     const msgs = this.history.filter((msg) => {
       return (
@@ -50,6 +107,15 @@ class Agent {
     return msgs.slice(-n - 1, -1)
   }
 
+  /**
+   * This function generates a full prompt for a chatbot conversation, including system messages, user
+   * input, and relevant memory.
+   * @param {string} [user_input] - The user's input, which is an optional parameter. If provided, it will be
+   * added to the prompt as a user message.
+   * @returns An object with two properties: "full_prompt" which is an array of messages to be
+   * displayed to the user, and "token_count" which is the number of tokens used by the messages in the
+   * "full_prompt" array.
+   */
   getFullPrompt(user_input = '') {
     const header = { role: 'system', content: this.headerPrompt() }
     const dtime = {
@@ -79,6 +145,7 @@ class Agent {
       return msgs
     }
 
+    // @ts-ignore
     const maxtokens = this.model.getTokenLimit() - 1000
     let ntokens = 0
     while (true) {
@@ -100,21 +167,36 @@ class Agent {
     return { full_prompt: _msgs(), token_count: ntokens }
   }
 
+  /**
+   * This function returns a compressed version of a chat history by removing certain properties from
+   * assistant messages.
+   * @returns The function `getCompressedHistory()` returns a modified version of the `history` array
+   * of messages. The modifications include removing all messages with the role of "user" and removing
+   * certain properties from the `thoughts` object of any messages with the role of "assistant". The
+   * modified `history` array is then returned.
+   */
   getCompressedHistory() {
     let hist = this.history.slice()
+    // @ts-ignore
     let system_msgs = hist.reduce((indices, msg, i) => {
       if (msg.role === 'system') {
+        // @ts-ignore
         indices.push(i)
       }
       return indices
     }, [])
+    /**
+     * @type {(string | number)[]}
+     */
     let assist_msgs = hist.reduce((indices, msg, i) => {
       if (msg.role === 'assistant') {
+        // @ts-ignore
         indices.push(i)
       }
       return indices
     }, [])
-    assist_msgs.forEach((i) => {
+    assist_msgs.forEach((/** @type {string | number} */ i) => {
+      // @ts-ignore
       let entry = Object.assign({}, hist[i])
       try {
         let respd = JSON.parse(entry.content)
@@ -126,21 +208,34 @@ class Agent {
           delete thoughts.plan
         }
         entry.content = JSON.stringify(respd, null, 2)
+        // @ts-ignore
         hist[i] = entry
       } catch (e) {}
     })
+    /**
+     * @type {number[]}
+     */
     let user_msgs = hist.reduce((indices, msg, i) => {
       if (msg.role === 'user') {
+        // @ts-ignore
         indices.push(i)
       }
       return indices
     }, [])
-    hist = hist.filter((msg, i) => {
+    hist = hist.filter((_msg, i) => {
       return !user_msgs.includes(i)
     })
     return hist
   }
 
+  /**
+   * This function returns a message with a prompt based on the current state of an agent.
+   * @param {string|null} message - The message parameter is a string that represents the user's input or response to
+  the agent's prompt. It is an optional parameter that can be passed to the getFullMessage function.
+   * @returns The function `getFullMessage` is returning a string that includes either the
+  `init_prompt` or `next_prompt` property of the current object instance, followed by a new line and
+  the `message` parameter (if provided).
+   */
   getFullMessage(message) {
     if (this.state === AgentStates.START) {
       return `${this.init_prompt}\n\n${message || ''}`
@@ -149,6 +244,18 @@ class Agent {
     }
   }
 
+  /**
+   * @typedef {Object} ChatObject
+   * @property {string|null} [message]
+   * @property {boolean} [run_tool]
+   */
+
+  /**
+   * This is a function for a chatbot agent that processes user messages, runs staging tools, and
+   * generates responses using a language model.
+   * @param {ChatObject} chatObject
+   * @returns the parsed response from the model's chat method, which is either an object or a string.
+   */
   async chat({ message = null, run_tool = false }) {
     if (this.state === AgentStates.STOP) {
       throw new Error(
@@ -194,7 +301,8 @@ class Agent {
     }
 
     const { full_prompt, token_count } = this.getFullPrompt(message)
-    const token_limit = await this.model.getTokenLimit()
+    const token_limit = this.model.getTokenLimit()
+    // @ts-ignore
     const max_tokens = Math.min(1000, Math.max(token_limit - token_count, 0))
     assert(max_tokens, {
       message: `Token limit of ${token_limit} exceeded`,
@@ -314,6 +422,12 @@ class Agent {
     return await parsedResp
   }
 
+  /**
+   * The function returns a string prompt based on the persona, goals, constraints, plan, and progress
+   * of a project.
+   * @returns The `headerPrompt()` function is returning a string that includes prompts for the
+   * persona, goals, constraints, plan, and progress, joined together with line breaks.
+   */
   headerPrompt() {
     const prompt = []
     prompt.push(this.personaPrompt())
@@ -335,10 +449,24 @@ class Agent {
     return prompt.join('\n') + '\n'
   }
 
+  /**
+   * The function returns a string that includes the name and description of a person.
+   * @returns The function `personaPrompt()` is returning a string that includes the name and
+   * description of the object that the function is called on. The specific values of `this.name` and
+   * `this.description` will depend on the object that the function is called on.
+   */
   personaPrompt() {
     return `You are ${this.name}, ${this.description}.`
   }
 
+  /**
+   * The function generates a progress prompt by iterating through a list of completed tasks and
+   * displaying them in a formatted string.
+   * @returns The `progressPrompt()` function is returning a string that lists the progress made so
+   * far. The string includes a header "PROGRESS SO FAR:" and a numbered list of tasks that have been
+   * completed, with each item in the list formatted as "DONE - [task description]". The items in the
+   * list are separated by newline characters.
+   */
   progressPrompt() {
     let prompt = []
     prompt.push('PROGRESS SO FAR:')
@@ -348,11 +476,21 @@ class Agent {
     return prompt.join('\n') + '\n'
   }
 
+  /**
+   * The function returns a string that displays the current plan.
+   * @returns The `planPrompt()` method is returning a string that includes the current plan joined
+   * together with new line characters and preceded by the text "CURRENT PLAN:".
+   */
   planPrompt() {
     let plan = this.plan.join('\n')
     return `CURRENT PLAN:\n${plan}\n`
   }
 
+  /**
+   * The function generates a prompt displaying a list of goals.
+   * @returns The `goalsPrompt()` function is returning a string that lists the goals of an object,
+   * with each goal numbered and separated by a newline character.
+   */
   goalsPrompt() {
     let prompt = []
     prompt.push('GOALS:')
@@ -362,6 +500,11 @@ class Agent {
     return prompt.join('\n') + '\n'
   }
 
+  /**
+   * The function generates a prompt message listing the constraints.
+   * @returns The function `constraintsPrompt()` returns a string that lists the constraints of an
+   * object, with each constraint numbered and separated by a new line character.
+   */
   constraintsPrompt() {
     let prompt = []
     prompt.push('CONSTRAINTS:')
@@ -371,6 +514,20 @@ class Agent {
     return prompt.join('\n') + '\n'
   }
 
+  /**
+   * The function attempts to parse a string as JSON, and if it fails, it may try to extract the JSON
+   * using GPT or return the original string.
+   * @param {string} s - The input string that contains the JSON data to be parsed.
+   * @param [try_gpt] - A boolean parameter that indicates whether to try extracting JSON using
+  GPT if the initial parsing fails. If set to true, the function will attempt to extract JSON using
+  GPT if the initial parsing fails. If set to false, the function will not attempt to extract JSON
+  using GPT.
+   * @returns The `loadJson` function returns a parsed JSON object if the input string is in valid JSON
+  format, or a string representation of the input if it cannot be parsed as JSON. If the input
+  cannot be parsed as JSON and the `try_gpt` parameter is `true`, the function will attempt to
+  extract JSON using a GPT model and retry parsing. If parsing still fails, an error is
+   */
+  // @ts-ignore
   async loadJson(s, try_gpt = true) {
     try {
       if (s.includes('Result: {')) {
@@ -400,11 +557,11 @@ class Agent {
             } catch (error) {
               // Retry with GPT extraction
               if (try_gpt) {
-                s = await extractJsonWithGpt(s)
+                s = await this.extractJsonWithGpt(s)
                 try {
                   return s
                 } catch (error) {
-                  return loadJson(s, false)
+                  return this.loadJson(s, false)
                 }
               }
               throw new Error('Unable to parse JSON')
@@ -417,6 +574,13 @@ class Agent {
     }
   }
 
+  /**
+   * The function extracts a JSON string from a given string using GPT.
+   * @param {any} s - The input string that needs to be converted to a JSON string.
+   * @returns The function `extractJsonWithGpt` is returning the result of calling `this.model.chat`
+  with the provided arguments. The result of this call is not shown in the code snippet, but it is
+  likely a Promise that resolves to the response generated by the GPT model.
+   */
   async extractJsonWithGpt(s) {
     const func = `function convertToJson(response) {
       // Implement the logic to convert the given string to a JSON string
@@ -439,8 +603,10 @@ class Agent {
       { role: 'user', content: args.join(', ') },
     ]
 
+    // @ts-ignore
     const token_count = this.model.countTokens(message)
     const token_limit = await this.model.getTokenLimit()
+    // @ts-ignore
     const max_tokens = Math.min(1000, Math.max(token_limit - token_count, 0))
 
     return this.model.chat({
@@ -450,6 +616,13 @@ class Agent {
     })
   }
 
+  /**
+   * The function runs a staging tool with specified arguments and returns the result or an error
+   * message.
+   * @returns The function `runStagingTool()` returns different responses depending on the conditions
+   * met in the code. It can return a string response or an object response depending on the command
+   * and arguments provided. The specific response returned is indicated in the code comments.
+   */
   runStagingTool() {
     if (!this.staging_tool.hasOwnProperty('name')) {
       const resp =
@@ -519,6 +692,7 @@ class Agent {
     }
 
     try {
+      // @ts-ignore
       const tool = this.tools[toolId]
       const resp = tool.run(kwargs)
       this.history.push({
@@ -539,6 +713,15 @@ class Agent {
   }
 }
 
+/**
+ * The function is an assertion helper that throws an error if a condition is not met.
+ * @param {number} condition - The condition is a boolean expression that is being tested for truthiness. If the
+condition is false, an error will be thrown.
+ * @param {{ message: string; token_count: number; }} message - The message parameter is an optional parameter that can be passed to the assert
+function. It is a string or any other data type that represents the error message that will be
+thrown if the condition parameter is false. If no message is provided, a default error message will
+be thrown.
+ */
 function assert(condition, message) {
   if (!condition) {
     throw new Error(JSON.stringify(message) || 'Assertion failed')
