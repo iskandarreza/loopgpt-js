@@ -1,5 +1,5 @@
 // Credits to Fariz Rahman for https://github.com/farizrahman4u/loopgpt
-export class LocalMemory {
+class LocalMemory {
   constructor(embeddingProvider) {
     this.docs = []
     this.embs = null
@@ -50,4 +50,9 @@ export class LocalMemory {
     this.docs = []
     this.embs = null
   }
+}
+
+
+module.exports = {
+  LocalMemory
 }

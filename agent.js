@@ -1,9 +1,17 @@
 // Credits to Fariz Rahman for https://github.com/farizrahman4u/loopgpt
-import { AgentStates, DEFAULT_AGENT_DESCRIPTION, DEFAULT_AGENT_NAME, DEFAULT_RESPONSE_FORMAT, INIT_PROMPT, NEXT_PROMPT } from "./constants.js";
-import { LocalMemory } from "./localMemory.js";
-import { OpenAIEmbeddingProvider } from "./openAIEmbeddingProvider.js";
+const {
+  AgentStates,
+  DEFAULT_AGENT_DESCRIPTION,
+  DEFAULT_AGENT_NAME,
+  DEFAULT_RESPONSE_FORMAT,
+  INIT_PROMPT,
+  NEXT_PROMPT
+} = require("./constants.js");
 
-export class Agent {
+const { LocalMemory } = require("./localMemory.js");
+const { OpenAIEmbeddingProvider } = require("./openAIEmbeddingProvider.js");
+
+class Agent {
   constructor({
     name = DEFAULT_AGENT_NAME,
     description = DEFAULT_AGENT_DESCRIPTION,
@@ -535,4 +543,8 @@ function assert(condition, message) {
   if (!condition) {
     throw new Error(JSON.stringify(message) || 'Assertion failed')
   }
+}
+
+module.exports = {
+  Agent
 }

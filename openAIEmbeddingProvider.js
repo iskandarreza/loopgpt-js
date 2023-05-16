@@ -1,5 +1,5 @@
 // Credits to Fariz Rahman for https://github.com/farizrahman4u/loopgpt
-export class OpenAIEmbeddingProvider {
+class OpenAIEmbeddingProvider {
   constructor(model = 'text-embedding-ada-002', apiKey = null) {
     this.model = model
     this.apiKey = apiKey
@@ -34,4 +34,9 @@ export class OpenAIEmbeddingProvider {
   static fromConfig(config) {
     return new OpenAIEmbeddingProvider(config.model, config.apiKey)
   }
+}
+
+
+module.exports = {
+  OpenAIEmbeddingProvider
 }

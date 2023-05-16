@@ -1,13 +1,13 @@
-import { Agent } from "./agent.js";
-import { AgentStates } from "./constants.js";
-import { LocalMemory } from "./localMemory.js";
-import { OpenAIEmbeddingProvider } from "./openAIEmbeddingProvider.js";
-import { OpenAIModel } from "./openAIModel.js";
+const { Agent } = require("./agent");
+const { AgentStates } = require("./constants");
+const { LocalMemory } = require("./localMemory");
+const { OpenAIEmbeddingProvider } = require("./openAIEmbeddingProvider");
+const { OpenAIModel } = require("./openAIModel");
 
-export default {
-  Agent, 
-  AgentStates, 
-  LocalMemory, 
-  OpenAIEmbeddingProvider, 
+module.exports = {
+  Agent,
+  AgentStates,
+  LocalMemory,
+  OpenAIEmbeddingProvider,
   OpenAIModel
-}
+};

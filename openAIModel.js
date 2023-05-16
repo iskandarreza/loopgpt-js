@@ -1,5 +1,5 @@
 // Credits to Fariz Rahman for https://github.com/farizrahman4u/loopgpt
-export class OpenAIModel {
+class OpenAIModel {
   constructor(model = 'gpt-3.5-turbo', apiKey = null, apiUrl = null) {
     this.model = model
     this.apiKey = apiKey
@@ -104,4 +104,8 @@ export class OpenAIModel {
   static fromConfig(config) {
     return new OpenAIModel(config.model, config.apiKey)
   }
+}
+
+module.exports = {
+  OpenAIModel
 }

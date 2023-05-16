@@ -1,9 +1,9 @@
 // Credits to Fariz Rahman for https://github.com/farizrahman4u/loopgpt
-export const DEFAULT_AGENT_NAME = 'AI-Worker'
-export const DEFAULT_AGENT_DESCRIPTION =
+const DEFAULT_AGENT_NAME = 'AI-Worker'
+const DEFAULT_AGENT_DESCRIPTION =
   'Autonomous AI Agent that runs in a web worker thread'
 
-export const _DEFAULT_RESPONSE_FORMAT = {
+const _DEFAULT_RESPONSE_FORMAT = {
   thoughts: {
     text: 'What do you want to say to the user?',
     reasoning: 'Why do you want to say this?',
@@ -14,11 +14,11 @@ export const _DEFAULT_RESPONSE_FORMAT = {
   command: { name: 'next command in your plan', args: { arg_name: 'value' } },
 }
 
-export const DEFAULT_RESPONSE_FORMAT = `You should only respond in JSON format as described below \nResponse Format: \n
+const DEFAULT_RESPONSE_FORMAT = `You should only respond in JSON format as described below \nResponse Format: \n
 ${JSON.stringify(_DEFAULT_RESPONSE_FORMAT)}
 \nEnsure the response can be parsed by JavaScript JSON.parse()`
 
-export const NEXT_PROMPT =
+const NEXT_PROMPT =
   'INSTRUCTIONS:\n' +
   '1 - Check the progress of your goals.\n' +
   '2 - If you have achieved all your goals, execute the "task_complete" command IMMEDIATELY. Otherwise,\n' +
@@ -36,7 +36,7 @@ export const NEXT_PROMPT =
   JSON.stringify(_DEFAULT_RESPONSE_FORMAT) +
   '\n'
 
-export const INIT_PROMPT =
+const INIT_PROMPT =
   'Do the following:\n' +
   '1 - Execute the next best command to achieve the goals.\n' +
   '2 - Execute the "do_nothing" command if there is no other command to execute.\n' +
@@ -44,9 +44,19 @@ export const INIT_PROMPT =
   JSON.stringify(_DEFAULT_RESPONSE_FORMAT) +
   '\n'
 
-export const AgentStates = {
+const AgentStates = {
   START: 'START',
   IDLE: 'IDLE',
   TOOL_STAGED: 'TOOL_STAGED',
   STOP: 'STOP',
+}
+
+
+module.exports = {
+  DEFAULT_AGENT_NAME,
+  DEFAULT_AGENT_DESCRIPTION,
+  DEFAULT_RESPONSE_FORMAT,
+  NEXT_PROMPT,
+  INIT_PROMPT,
+  AgentStates,
 }
