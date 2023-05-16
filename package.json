@@ -1,6 +1,6 @@
 {
   "name": "loopgpt-js",
-  "version": "0.0.1",
+  "version": "0.0.10",
   "repository": {
     "type": "git",
     "url": "git://github.com/iskandarreza/loopgpt-js.git"
@@ -18,5 +18,8 @@
   ],
   "author": "Fariz Rahman, Iskandar Reza",
   "license": "MIT",
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^20.1.5"
+  }
 }

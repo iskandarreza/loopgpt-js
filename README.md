@@ -7,4 +7,5 @@ npm install loopgpt-js
 
 Usage example:
 ```js
+
 ```
