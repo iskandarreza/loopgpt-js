@@ -1,0 +1,22 @@
+{
+  "name": "loopgpt-js",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/iskandarreza/loopgpt-js.git"
+  },
+  "description": "A Javascript implementation of LoopGPT",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "keywords": [
+    "loopgpt",
+    "autogpt",
+    "gpt-3",
+    "ai"
+  ],
+  "author": "Fariz Rahman, Iskandar Reza",
+  "license": "MIT",
+  "type": "module"
+}
