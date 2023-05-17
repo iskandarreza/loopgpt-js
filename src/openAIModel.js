@@ -9,25 +9,51 @@ methods for generating responses to messages and counting tokens. */
  * @property {number} [temperature]
  */
 
+/* The OpenAIModel class is a JavaScript class that represents a language model object with properties
+such as model name, API key, and API URL, and methods for generating AI-generated responses and
+counting tokens. */
 class OpenAIModel {
+  
   /**
-   * This is a constructor function that initializes properties for a language model object, including
-   * the model name, API key, and API URL.
-   * @param {string} [model=gpt-3.5-turbo] - The model parameter is a string that represents the name or version
-   * of the language model that will be used for natural language processing tasks. In this case, the
-   * default model is 'gpt-3.5-turbo'.
-   * @param {string} [apiKey=undefined] - The API key is a unique identifier that allows access to a specific API
-   * service. It is used to authenticate and authorize requests made to the API. In this constructor,
-   * the apiKey parameter is used to store the API key that will be used to access the API service. If
-   * the apiKey parameter is not provided
-   * @param {string} [apiUrl=undefined] - The `apiUrl` parameter is a string that represents the URL of the API
-   * endpoint that the constructor will use to make requests. If this parameter is not provided, the
-   * constructor will use a default API endpoint.
+   * @param {string} value
    */
-  constructor(model = 'gpt-3.5-turbo', apiKey = undefined, apiUrl = undefined) {
+  #apiKey = 'API_KEY_NOT_SET';
+
+  getApiKey() {
+    return this.#apiKey;
+  }
+
+  /**
+   * @param {string} value
+   */
+  setApiKey(value) {
+    this.#apiKey = value;
+  }
+  
+  /**
+   * This is a constructor function that initializes an OpenAI chatbot with a specified model and API
+   * key.
+   * @param {string} [model=gpt-3.5-turbo] - The model parameter is a string that specifies the OpenAI language
+   * model to use for generating responses. In this case, the default value is 'gpt-3.5-turbo', but it
+   * can be changed to any other supported model.
+   * @param {string|null} [apiKey=null] - The API key is a unique identifier that allows access to a specific OpenAI
+   * API. It is required to make API requests and authenticate the user.
+   * @param {string} [apiUrl] - The `apiUrl` parameter is a string that represents the URL of the OpenAI API
+   * endpoint that will be used to make requests for chat completions. If this parameter is not
+   * provided, the default URL `https://api.openai.com/v1/chat/completions` will be used.
+   */
+  constructor(model = 'gpt-3.5-turbo', apiKey = null, apiUrl) {
     this.model = model
-    this.apiKey = apiKey
-    this.apiUrl = apiUrl
+    /**
+     * @type {string}
+     */
+    this.apiUrl = apiUrl || 'https://api.openai.com/v1/chat/completions'
+    if (apiKey !== null) {
+      this.setApiKey(apiKey)
+    } else {
+      // handle api not set
+      throw Error('API key not set!')
+    }
   }
 
   /**
@@ -62,7 +88,7 @@ class OpenAIModel {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.apiKey}`,
+            Authorization: `Bearer ${this.getApiKey()}`,
           },
           body: JSON.stringify({
             model: this.model,
@@ -140,7 +166,7 @@ class OpenAIModel {
 
   /**
    * The function returns the token limit for a specific language model.
-   * @returns The function `getTokenLimit()` returns the token limit for a specific language model
+   * @returns {number} The function `getTokenLimit()` returns the token limit for a specific language model
    * based on the value of `this.model`. The token limit is returned as an integer value.
    */
   getTokenLimit() {
@@ -148,7 +174,7 @@ class OpenAIModel {
       'gpt-3.5-turbo': 4000,
       'gpt-4': 8000,
       'gpt-4-32k': 32000,
-    }[this.model]
+    }[this.model] || 0
   }
 
   /**
@@ -159,7 +185,7 @@ class OpenAIModel {
   config() {
     return {
       model: this.model,
-      apiKey: this.apiKey,
+      apiKey: this.#apiKey,
     }
   }
 

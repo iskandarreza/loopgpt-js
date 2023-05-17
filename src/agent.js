@@ -145,7 +145,6 @@ class Agent {
       return msgs
     }
 
-    // @ts-ignore
     const maxtokens = this.model.getTokenLimit() - 1000
     let ntokens = 0
     while (true) {
@@ -518,7 +517,7 @@ class Agent {
    * The function attempts to parse a string as JSON, and if it fails, it may try to extract the JSON
    * using GPT or return the original string.
    * @param {string} s - The input string that contains the JSON data to be parsed.
-   * @param [try_gpt] - A boolean parameter that indicates whether to try extracting JSON using
+   * @param {boolean} [try_gpt] - A boolean parameter that indicates whether to try extracting JSON using
   GPT if the initial parsing fails. If set to true, the function will attempt to extract JSON using
   GPT if the initial parsing fails. If set to false, the function will not attempt to extract JSON
   using GPT.
@@ -605,7 +604,7 @@ class Agent {
 
     // @ts-ignore
     const token_count = this.model.countTokens(message)
-    const token_limit = await this.model.getTokenLimit()
+    const token_limit = this.model.getTokenLimit()
     // @ts-ignore
     const max_tokens = Math.min(1000, Math.max(token_limit - token_count, 0))
 

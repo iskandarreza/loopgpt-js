@@ -1,6 +1,6 @@
 {
-  "name": "loopgpt-js-test",
-  "version": "0.0.1384",
+  "name": "loopgpt-js",
+  "version": "0.0.1385",
   "repository": {
     "type": "git",
     "url": "git://github.com/iskandarreza/loopgpt-js.git"
