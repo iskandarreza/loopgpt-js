@@ -91,7 +91,6 @@ class LocalMemory {
   }
 }
 
-
 module.exports = {
-  LocalMemory
+  LocalMemory,
 }

@@ -1,18 +1,4 @@
-## LoopGPT-JS
-
-A lightweight Javascript implementation of the [`loopgpt`](https://github.com/farizrahman4u/loopgpt) Python module by Fariz Rahman
-For use in browser environments, particularly off the main thread within web worker processes
-
-#### Add to your node project:
-
-```bash
-npm install loopgpt-js
-```
-
-#### Usage example:
-
-```js
-const loopgpt = require('loopgpt-js')
+const loopgpt = require('../dist/index')
 const { Agent } = loopgpt
 
 async function initLoop() {
@@ -23,9 +9,11 @@ async function initLoop() {
 
   const { apiKey } = await apiKeyResponse.json()
 
+  const apiUrl = 'https://api.openai.com/v1/chat/completions'
+
   // or you could pass it in directly
   const keys = {
-    openai: apiKey,
+    openai: { apiKey, apiUrl },
     google: {
       googleApiKey: 'GOOGLE_API_KEY',
       googleCxId: 'CUSTOM_SEARCH_ENGINE_ID',
@@ -55,4 +43,3 @@ async function initLoop() {
 }
 
 initLoop()
-```
