@@ -1,5 +1,5 @@
 const { Agent } = require("./agent");
-const { AgentStates } = require("./constants");
+const { AgentStates } = require("./constants.js");
 const { LocalMemory } = require("./localMemory");
 const { OpenAIEmbeddingProvider } = require("./openAIEmbeddingProvider");
 const { OpenAIModel } = require("./openAIModel");

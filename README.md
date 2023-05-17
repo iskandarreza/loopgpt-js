@@ -7,8 +7,8 @@ npm install loopgpt-js
 
 Usage example:
 ```js
-const loopGpt = require("loopgpt-js");
-const { Agent, AgentStates, LocalMemory, OpenAIEmbeddingProvider, OpenAIModel } = loopGpt;
+const loopgpt = require("loopgpt-js");
+const { Agent, AgentStates, LocalMemory, OpenAIEmbeddingProvider, OpenAIModel } = loopgpt;
 
 const init = async () => {
   // example startup

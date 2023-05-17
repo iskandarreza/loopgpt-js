@@ -398,12 +398,12 @@ declare module "agent" {
          */
         runStagingTool(): any;
     }
-    import { OpenAIModel } from "openAIModel.js";
+    import { OpenAIModel } from "openAIModel";
     import { LocalMemory } from "localMemory";
 }
 declare module "index" {
     import { Agent } from "agent";
-    import { AgentStates } from "constants.js";
+    import { AgentStates } from "constants";
     import { LocalMemory } from "localMemory";
     import { OpenAIEmbeddingProvider } from "openAIEmbeddingProvider";
     import { OpenAIModel } from "openAIModel";
