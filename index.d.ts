@@ -22,23 +22,28 @@ declare module "openAIModel" {
             apiKey: string | undefined;
         }): OpenAIModel;
         /**
-         * This is a constructor function that initializes properties for a language model object, including
-         * the model name, API key, and API URL.
-         * @param {string} [model=gpt-3.5-turbo] - The model parameter is a string that represents the name or version
-         * of the language model that will be used for natural language processing tasks. In this case, the
-         * default model is 'gpt-3.5-turbo'.
-         * @param {string} [apiKey=undefined] - The API key is a unique identifier that allows access to a specific API
-         * service. It is used to authenticate and authorize requests made to the API. In this constructor,
-         * the apiKey parameter is used to store the API key that will be used to access the API service. If
-         * the apiKey parameter is not provided
-         * @param {string} [apiUrl=undefined] - The `apiUrl` parameter is a string that represents the URL of the API
-         * endpoint that the constructor will use to make requests. If this parameter is not provided, the
-         * constructor will use a default API endpoint.
+         * This is a constructor function that initializes an OpenAI chatbot with a specified model and API
+         * key.
+         * @param {string} [model=gpt-3.5-turbo] - The model parameter is a string that specifies the OpenAI language
+         * model to use for generating responses. In this case, the default value is 'gpt-3.5-turbo', but it
+         * can be changed to any other supported model.
+         * @param {string|null} [apiKey=null] - The API key is a unique identifier that allows access to a specific OpenAI
+         * API. It is required to make API requests and authenticate the user.
+         * @param {string} [apiUrl] - The `apiUrl` parameter is a string that represents the URL of the OpenAI API
+         * endpoint that will be used to make requests for chat completions. If this parameter is not
+         * provided, the default URL `https://api.openai.com/v1/chat/completions` will be used.
          */
-        constructor(model?: string | undefined, apiKey?: string | undefined, apiUrl?: string | undefined);
+        constructor(model?: string | undefined, apiKey?: string | null | undefined, apiUrl?: string | undefined);
+        getApiKey(): string;
+        /**
+         * @param {string} value
+         */
+        setApiKey(value: string): void;
         model: string;
-        apiKey: string | undefined;
-        apiUrl: string | undefined;
+        /**
+         * @type {string}
+         */
+        apiUrl: string;
         /**
          * This is an async function that sends a POST request to an API endpoint with specified parameters
          * and returns the response data.
@@ -69,10 +74,10 @@ declare module "openAIModel" {
         countTokens(messages: any): number;
         /**
          * The function returns the token limit for a specific language model.
-         * @returns The function `getTokenLimit()` returns the token limit for a specific language model
+         * @returns {number} The function `getTokenLimit()` returns the token limit for a specific language model
          * based on the value of `this.model`. The token limit is returned as an integer value.
          */
-        getTokenLimit(): number | undefined;
+        getTokenLimit(): number;
         /**
          * The function returns an object with the model and apiKey properties.
          * @returns An object with two properties: "model" and "apiKey", both of which are being accessed
@@ -80,8 +85,9 @@ declare module "openAIModel" {
          */
         config(): {
             model: string;
-            apiKey: string | undefined;
+            apiKey: string;
         };
+        #private;
     }
 }
 declare module "constants" {
@@ -371,7 +377,7 @@ declare module "agent" {
          * The function attempts to parse a string as JSON, and if it fails, it may try to extract the JSON
          * using GPT or return the original string.
          * @param {string} s - The input string that contains the JSON data to be parsed.
-         * @param [try_gpt] - A boolean parameter that indicates whether to try extracting JSON using
+         * @param {boolean} [try_gpt] - A boolean parameter that indicates whether to try extracting JSON using
         GPT if the initial parsing fails. If set to true, the function will attempt to extract JSON using
         GPT if the initial parsing fails. If set to false, the function will not attempt to extract JSON
         using GPT.
@@ -408,5 +414,55 @@ declare module "index" {
     import { OpenAIEmbeddingProvider } from "openAIEmbeddingProvider";
     import { OpenAIModel } from "openAIModel";
     export { Agent, AgentStates, LocalMemory, OpenAIEmbeddingProvider, OpenAIModel };
+}
+/**
+ * Abstract base class for tools.
+ */
+declare class BaseTool {
+    /**
+     * Creates an instance of the tool from its configuration.
+     * @param {Object} config - The configuration object.
+     * @returns {BaseTool} An instance of the tool.
+     */
+    static fromConfig(config: Object): BaseTool;
+    /**
+     * Unique identifier for the tool.
+     * @type {string}
+     */
+    get id(): string;
+    /**
+     * Description of the tool.
+     * @type {string}
+     */
+    get desc(): string;
+    /**
+     * Dictionary of arguments for the tool.
+     * @type {Object.<string, string>}
+     */
+    get args(): {
+        [x: string]: string;
+    };
+    /**
+     * Executes the tool and returns the output.
+     * @returns {string} The output of the tool.
+     */
+    run(): string;
+    /**
+     * Response format of the tool.
+     * @type {Object.<string, string>}
+     */
+    get resp(): {
+        [x: string]: string;
+    };
+    /**
+     * Returns the tool information as a JSON string.
+     * @returns {string} The JSON string representation of the tool.
+     */
+    prompt(): string;
+    /**
+     * Returns the configuration object for the tool.
+     * @returns {Object} The configuration object.
+     */
+    config(): Object;
 }
 //# sourceMappingURL=index.d.ts.map

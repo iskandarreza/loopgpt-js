@@ -113,7 +113,8 @@
     "src/constants.js",
     "src/openAIModel.js",
     "src/openAIEmbeddingProvider.js",
-    "src/localMemory.js"
+    "src/localMemory.js",
+    "src/tools/baseToolClass.js"
   ],
   "exclude": [
     "./examples/**/*",

@@ -1,3 +1,6 @@
+dev-scripts
 src
+# src/tools/googleSearch.js
+# src/tools/webPakgeScraper.js
 webpack.config.js
 tsconfig.json

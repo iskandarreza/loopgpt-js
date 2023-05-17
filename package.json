@@ -26,5 +26,11 @@
     "typescript": "^5.0.4",
     "webpack": "^5.82.1",
     "webpack-cli": "^5.1.1"
+  },
+  "dependencies": {
+    "axios": "^1.4.0",
+    "cheerio": "^1.0.0-rc.12",
+    "googleapis": "^118.0.0",
+    "node-duckduckgo": "^2.0.18"
   }
 }
