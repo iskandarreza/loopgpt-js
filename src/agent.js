@@ -209,7 +209,7 @@ class Agent {
         entry.content = JSON.stringify(respd, null, 2)
         // @ts-ignore
         hist[i] = entry
-      } catch (e) {}
+      } catch (e) { }
     })
     /**
      * @type {number[]}
@@ -407,7 +407,7 @@ class Agent {
           this.plan = plan
         }
       }
-    } catch {}
+    } catch { }
 
     this.history.push({ role: 'user', content: message })
     this.history.push({

@@ -415,54 +415,51 @@ declare module "index" {
     import { OpenAIModel } from "openAIModel";
     export { Agent, AgentStates, LocalMemory, OpenAIEmbeddingProvider, OpenAIModel };
 }
-/**
- * Abstract base class for tools.
- */
-declare class BaseTool {
+declare module "tools/baseToolClass" {
     /**
-     * Creates an instance of the tool from its configuration.
-     * @param {Object} config - The configuration object.
-     * @returns {BaseTool} An instance of the tool.
+     * Abstract base class for tools.
      */
-    static fromConfig(config: Object): BaseTool;
-    /**
-     * Unique identifier for the tool.
-     * @type {string}
-     */
-    get id(): string;
-    /**
-     * Description of the tool.
-     * @type {string}
-     */
-    get desc(): string;
-    /**
-     * Dictionary of arguments for the tool.
-     * @type {Object.<string, string>}
-     */
-    get args(): {
-        [x: string]: string;
-    };
-    /**
-     * Executes the tool and returns the output.
-     * @returns {string} The output of the tool.
-     */
-    run(): string;
-    /**
-     * Response format of the tool.
-     * @type {Object.<string, string>}
-     */
-    get resp(): {
-        [x: string]: string;
-    };
-    /**
-     * Returns the tool information as a JSON string.
-     * @returns {string} The JSON string representation of the tool.
-     */
-    prompt(): string;
-    /**
-     * Returns the configuration object for the tool.
-     * @returns {Object} The configuration object.
-     */
-    config(): Object;
+    export class BaseTool {
+        /**
+         * Creates an instance of the tool from its configuration.
+         * @param {Object} config - The configuration object.
+         * @returns {BaseTool} An instance of the tool.
+         */
+        static fromConfig(config: Object): BaseTool;
+        /**
+         * Unique identifier for the tool.
+         * @type {string}
+         */
+        get id(): string;
+        /**
+         * Description of the tool.
+         * @type {string}
+         */
+        get desc(): string;
+        /**
+         * Dictionary of arguments for the tool.
+         * @type {Object.<string, string>}
+         */
+        get args(): {
+            [x: string]: string;
+        };
+        /**
+         * Response format of the tool.
+         * @type {Object.<string, string>}
+         */
+        get resp(): {
+            [x: string]: string;
+        };
+        /**
+         * Returns the tool information as a JSON string.
+         * @returns {string} The JSON string representation of the tool.
+         */
+        prompt(): string;
+        /**
+         * Returns the configuration object for the tool.
+         * @returns {Object} The configuration object.
+         */
+        config(): Object;
+    }
 }
 //# sourceMappingURL=index.d.ts.map
