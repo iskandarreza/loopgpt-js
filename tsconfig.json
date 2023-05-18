@@ -53,10 +53,10 @@
     "declaration": true,                              /* Generate .d.ts files from TypeScript and JavaScript files in your project. */
     "declarationMap": true,                           /* Create sourcemaps for d.ts files. */
     "emitDeclarationOnly": true,                      /* Only output d.ts files and not JavaScript files. */
-    // "sourceMap": true,                                /* Create source map files for emitted JavaScript files. */
+    "sourceMap": true,                                /* Create source map files for emitted JavaScript files. */
     // "inlineSourceMap": true,                          /* Include sourcemap files inside the emitted JavaScript. */
-    "outFile": "./index.d.ts",                                  /* Specify a file that bundles all outputs into one JavaScript file. If 'declaration' is true, also designates a file that bundles all .d.ts output. */
-    // "outDir": "./",                                   /* Specify an output folder for all emitted files. */
+    "outFile": "./dist/index.d.ts",                                  /* Specify a file that bundles all outputs into one JavaScript file. If 'declaration' is true, also designates a file that bundles all .d.ts output. */
+    "outDir": "./dist",                                   /* Specify an output folder for all emitted files. */
     // "removeComments": true,                           /* Disable emitting comments. */
     // "noEmit": true,                                   /* Disable emitting files from a compilation. */
     // "importHelpers": true,                            /* Allow importing helper functions from tslib once per project, instead of including them per-file. */
@@ -105,7 +105,7 @@
 
     /* Completeness */
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
-    "skipLibCheck": true                                 /* Skip type checking all .d.ts files. */
+    // "skipLibCheck": true                                 /* Skip type checking all .d.ts files. */
   }, 
   "files": [
     "src/index.js",
@@ -114,7 +114,10 @@
     "src/openAIModel.js",
     "src/openAIEmbeddingProvider.js",
     "src/localMemory.js",
-    "src/tools/baseToolClass.js"
+    "src/tools.js",
+    "src/tools/baseToolClass.js",
+    "src/tools/webSearch.js",
+    "src/tools/webPageScraper.js"
   ],
   "exclude": [
     "./examples/**/*",

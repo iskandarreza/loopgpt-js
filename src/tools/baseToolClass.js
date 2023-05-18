@@ -1,13 +1,21 @@
 /**
  * Abstract base class for tools.
  */
-export class BaseTool {
+class BaseTool {
+  /**
+   * We need to pass in a string for the name, because minification will destroy the class name 
+   * and so we cannot rely on `this.constructor.name`
+   * @param {string} name
+   */
+  constructor(name) {
+    this.name = name
+  }
   /**
    * Unique identifier for the tool.
    * @type {string}
    */
   get id() {
-    return this.constructor.name.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+    return this.name.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
   }
 
   /**
@@ -15,7 +23,7 @@ export class BaseTool {
    * @type {string}
    */
   get desc() {
-    return this.constructor.name.replace(/([a-z])([A-Z])/g, '$1 $2');
+    return this.name.replace(/([a-z])([A-Z])/g, '$1 $2');
   }
 
   /**
@@ -63,7 +71,9 @@ export class BaseTool {
    * @param {Object} config - The configuration object.
    * @returns {BaseTool} An instance of the tool.
    */
-  static fromConfig(config) {
-    return new this();
-  }
+  // static fromConfig(config) {
+  //   return new this(config.name);
+  // }
 }
+
+module.exports = BaseTool

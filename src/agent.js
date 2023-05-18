@@ -18,6 +18,7 @@ const { OpenAIEmbeddingProvider } = require("./openAIEmbeddingProvider.js");
  * @property {string} [description]
  * @property {string[]} [goals]
  * @property {OpenAIModel} [model]
+ * @property {{ [s: string]: any; } | ArrayLike<any>} [tools]
  * @property {*} [embedding_provider]
  * @property {number} [temperature]
  */
@@ -52,6 +53,7 @@ class Agent {
     description = DEFAULT_AGENT_DESCRIPTION,
     goals = undefined,
     model = undefined,
+    tools = undefined,
     embedding_provider = null,
     temperature = 0.8,
   } = {}) {
@@ -87,7 +89,23 @@ class Agent {
     /**
      * @type {{ [s: string]: any; } | ArrayLike<any>}
      */
-    this.tools = []
+    this._tools = tools || []
+  }
+
+  /**
+   * Sets the tools for the agent.
+   * @param {string | ArrayLike<any> | { [s: string]: any; }} _tools - The tools to be set.
+   */
+  set tools(_tools) {
+    this._tools = _tools;
+  }
+
+  /**
+   * Gets the tools of the agent.
+   * @returns {string | ArrayLike<any> | { [s: string]: any; }} The tools of the agent.
+   */
+  get tools() {
+    return this._tools;
   }
 
   /**
@@ -511,6 +529,36 @@ class Agent {
       prompt.push(`${i + 1}. ${this.constraints[i]}`)
     }
     return prompt.join('\n') + '\n'
+  }
+
+  /**
+   * Displays the prompt for selecting tools.
+   * @returns {string} The tool prompt.
+   */
+  toolsPrompt() {
+    const prompt = [];
+    prompt.push("Commands:");
+    for (let i = 0; i < this.tools.length; i++) {
+      // @ts-ignore
+      const tool = new this.tools[i]();
+      tool.agent = this;
+      prompt.push(`${i + 1}. ${tool.prompt()}`);
+    }
+    const taskCompleteCommand = {
+      name: "task_complete",
+      description: "Execute when all tasks are completed. This will terminate the session.",
+      args: {},
+      responseFormat: { success: "true" },
+    };
+    const doNothingCommand = {
+      name: "do_nothing",
+      description: "Do nothing.",
+      args: {},
+      responseFormat: { response: "Nothing Done." },
+    };
+    prompt.push(`${this.tools.length + 2}. ${JSON.stringify(taskCompleteCommand)}`);
+    prompt.push(`${this.tools.length + 3}. ${JSON.stringify(doNothingCommand)}`);
+    return prompt.join("\n") + "\n";
   }
 
   /**
