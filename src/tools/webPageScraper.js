@@ -150,8 +150,7 @@ class WebPageScraper extends BaseTool {
           content: `Summarize the following, ${currentChunkNumber} of ${totalChunks}, from a webpage titled: ${title}`,
         },
         { role: 'user', content: `${chunk}` },
-      ];
-
+      ]
 
       const response = await this.openAIComplete(message)
       if (response.error) {
@@ -179,38 +178,38 @@ class WebPageScraper extends BaseTool {
    * @param {number} maxTokens
    */
   splitTextIntoChunks(text, maxTokens) {
-    const chunks = [];
-    const sentences = text.split(/[.:]\s*\n|\s*,\s+/);
-    let currentChunk = '';
+    const chunks = []
+    const sentences = text.split(/[.:]\s*\n|\s*,\s+/)
+    let currentChunk = ''
 
     for (const sentence of sentences) {
-      const sentenceTokens = this.countTokens(sentence);
+      const sentenceTokens = this.countTokens(sentence)
 
       if (currentChunk.length + sentenceTokens < maxTokens) {
-        currentChunk += sentence + '.';
+        currentChunk += sentence + '.'
       } else {
         if (currentChunk !== '') {
-          chunks.push(currentChunk.trim());
-          currentChunk = '';
+          chunks.push(currentChunk.trim())
+          currentChunk = ''
         }
 
         if (sentenceTokens >= maxTokens) {
           const sentenceChunks = this.splitLongSentenceIntoChunks(
             sentence,
             maxTokens
-          );
-          chunks.push(...sentenceChunks);
+          )
+          chunks.push(...sentenceChunks)
         } else {
-          chunks.push(sentence + '.');
+          chunks.push(sentence + '.')
         }
       }
     }
 
     if (currentChunk !== '') {
-      chunks.push(currentChunk.trim());
+      chunks.push(currentChunk.trim())
     }
 
-    return chunks;
+    return chunks
   }
 
   /**
@@ -218,34 +217,34 @@ class WebPageScraper extends BaseTool {
    * @param {number} maxTokens
    */
   splitLongSentenceIntoChunks(sentence, maxTokens) {
-    const words = sentence.split(/\s+/);
-    const chunks = [];
-    let currentChunk = '';
-    let currentTokenCount = 0;
+    const words = sentence.split(/\s+/)
+    const chunks = []
+    let currentChunk = ''
+    let currentTokenCount = 0
 
     for (const word of words) {
-      const wordTokens = this.countTokens(word);
-      const chunkTokens = currentTokenCount;
+      const wordTokens = this.countTokens(word)
+      const chunkTokens = currentTokenCount
 
       if (chunkTokens + wordTokens < maxTokens) {
-        currentChunk += word + ' ';
-        currentTokenCount += wordTokens;
+        currentChunk += word + ' '
+        currentTokenCount += wordTokens
       } else {
         if (currentChunk !== '') {
-          chunks.push(currentChunk.trim());
-          currentChunk = '';
-          currentTokenCount = 0;
+          chunks.push(currentChunk.trim())
+          currentChunk = ''
+          currentTokenCount = 0
         }
-        currentChunk = word + ' ';
-        currentTokenCount = wordTokens;
+        currentChunk = word + ' '
+        currentTokenCount = wordTokens
       }
     }
 
     if (currentChunk !== '') {
-      chunks.push(currentChunk.trim());
+      chunks.push(currentChunk.trim())
     }
 
-    return chunks;
+    return chunks
   }
 
   /**
@@ -253,11 +252,11 @@ class WebPageScraper extends BaseTool {
    */
   countTokens(text) {
     // Basic heuristic to estimate token count
-    const wordCount = text.split(/\s+/).length;
-    const punctuationCount = text.split(/[.,;!?]/).length - 1;
-    const tokenCount = wordCount + punctuationCount;
+    const wordCount = text.split(/\s+/).length
+    const punctuationCount = text.split(/[.,;!?]/).length - 1
+    const tokenCount = wordCount + punctuationCount
 
-    return tokenCount;
+    return tokenCount
   }
 
   /**
