@@ -1,31 +1,33 @@
 // Credits to Fariz Rahman for https://github.com/farizrahman4u/loopgpt
-const { OpenAIModel } = require("./openAIModel.js");
+const { OpenAIModel } = require('./openAIModel.js')
 const {
   AgentStates,
   DEFAULT_AGENT_DESCRIPTION,
   DEFAULT_AGENT_NAME,
   DEFAULT_RESPONSE_FORMAT,
   INIT_PROMPT,
-  NEXT_PROMPT
-} = require("./constants.js");
+  NEXT_PROMPT,
+} = require('./constants.js')
 
-const { LocalMemory } = require("./localMemory.js");
-const { OpenAIEmbeddingProvider } = require("./openAIEmbeddingProvider.js");
-const { Tools } = require("./tools.js");
+const { LocalMemory } = require('./localMemory.js')
+const { OpenAIEmbeddingProvider } = require('./openAIEmbeddingProvider.js')
+const { Tools } = require('./tools.js')
+const BaseTool = require('./tools/baseToolClass.js')
 
 /**
- * @typedef {any} keys
+ * @typedef {object} keyConfig
+ * @property {{ googleApiKey: string; googleCxId: string; }} google
+ * @property {{ apiKey: string; }} openai
  */
-
 class Agent {
   /**
-     * @type {keys}
-     */
-  #keys; // hold keys in this private prop
+   * @type {keyConfig}
+   */
+  #keys // hold keys in this private prop
 
   /**
-     * @type {string | ArrayLike<any> | { [s: string]: any; }}
-     */
+   * @type {BaseTool[]} tools
+   */
   #tools
 
   /**
@@ -33,33 +35,35 @@ class Agent {
    * @class Agent
    * @constructor
    * @param {object} config - The configuration object for initializing the Agent class.
+   * @param {keyConfig} config.keys - The keys object containing model-related keys.
    * @param {string} [config.name] - The name of the agent. (optional)
    * @param {string} [config.description] - The description of the agent. (optional)
    * @param {string[]} [config.goals] - The goals associated with the agent. (optional)
+   * @param {number} [config.init_prompt] - The init prompt with general operating instructions for generating responses. (optional)
+   * @param {number} [config.next_prompt] - The next prompt for evaluating responses and generating next responses. (optional)
    * @param {OpenAIModel} [config.model] - The OpenAI model for the agent. (optional)
-   * @param {{ [s: string]: any; } | ArrayLike<any>} [config.tools] - The tools associated with the agent. (optional)
+   * @param {{name: string; description: string; args: object; response_format: object;}} [config.tools] - The tools associated with the agent. (optional)
    * @param {*} [config.embedding_provider] - The embedding provider for the agent. (optional)
    * @param {number} [config.temperature] - The temperature value for generating responses. (optional)
-   * @param {keys} [config.keys] - The keys object containing model-related keys.
-  */
-  constructor({
-    name = DEFAULT_AGENT_NAME,
-    description = DEFAULT_AGENT_DESCRIPTION,
-    goals = undefined,
-    model = undefined,
-    tools = undefined,
-    embedding_provider = null,
-    temperature = 0.8,
-    keys = {}
-  } = {}) {
-    this.#keys = keys
-    this.name = name
-    this.description = description
-    this.goals = goals || []
-    this.model = new OpenAIModel('gpt-3.5-turbo', keys.openai.apiKey, keys.openai.apiUrl) || model || undefined
+   */
+  constructor(config) {
+    this.#keys = config.keys
+    this.name = config.name || DEFAULT_AGENT_NAME
+    this.description = config.description || DEFAULT_AGENT_DESCRIPTION
+    this.goals = config.goals || []
+
+    const openaiApiKey = this.#keys.openai.apiKey
+    this.model =
+      new OpenAIModel(openaiApiKey, 'gpt-3.5-turbo') ||
+      config.model ||
+      undefined
     this.embedding_provider =
-      embedding_provider || new OpenAIEmbeddingProvider()
-    this.temperature = temperature
+      config.embedding_provider ||
+      new OpenAIEmbeddingProvider(
+        this.model.config().model,
+        config.keys.openai.apiKey
+      )
+    this.temperature = config.temperature || 0.8
     this.memory = new LocalMemory({
       embedding_provider: this.embedding_provider,
     })
@@ -67,8 +71,8 @@ class Agent {
      * @type {{ role: string; content: any; }[]}
      */
     this.history = []
-    this.init_prompt = INIT_PROMPT
-    this.next_prompt = NEXT_PROMPT
+    this.init_prompt = config.init_prompt || INIT_PROMPT
+    this.next_prompt = config.next_prompt || NEXT_PROMPT
     /**
      * @type {any[]}
      */
@@ -82,22 +86,23 @@ class Agent {
      */
     this.constraints = []
     this.state = AgentStates.START
-    /**
-     * @type {string | ArrayLike<any> | { [s: string]: any; }}
-     */
-    this.#tools = tools || new Tools().browsingTools(keys.google) || []
 
-    const toolsInfo = new Tools().browsingTools().reduce((accumulator, tool) => {
+    this.#tools = [...new Tools().browsingTools(this.#keys)]
+
+    /**
+     * @type {BaseTool[]}
+     */
+    const toolsInfo = this.#tools.reduce((accumulator, tool) => {
       // @ts-ignore
-      accumulator.push(JSON.parse(new tool().prompt()));
-      return accumulator;
+      accumulator.push(JSON.parse(new tool().prompt()))
+      return accumulator
     }, [])
 
     this.tools = toolsInfo || []
   }
 
   /**
-   * @param {{ [s: string]: any; } | ArrayLike<any>} tools
+   * @param {BaseTool[]} tools
    */
   set _tools(tools) {
     this.#tools = tools
@@ -222,7 +227,7 @@ class Agent {
         entry.content = JSON.stringify(respd, null, 2)
         // @ts-ignore
         hist[i] = entry
-      } catch (e) { }
+      } catch (e) {}
     })
     /**
      * @type {number[]}
@@ -371,56 +376,61 @@ class Agent {
       }
     )
 
-    let parsedResp = resp.choices[0].message.content
+    let parsedResp
+    if (resp.choices[0]) {
+      parsedResp = resp.choices[0].message.content
 
-    try {
-      parsedResp = await this.loadJson(parsedResp)
-      let plan = await parsedResp.thoughts.plan
+      try {
+        parsedResp = await this.loadJson(parsedResp)
+        let plan = await parsedResp.thoughts.plan
 
-      if (plan && Array.isArray(plan)) {
-        if (
-          plan.length === 0 ||
-          (plan.length === 1 && plan[0].replace('-', '').length === 0)
-        ) {
-          this.staging_tool = { name: 'task_complete', args: {} }
-          this.staging_response = parsedResp
-          this.state = AgentStates.STOP
-        }
-      } else {
-        if (typeof parsedResp === 'object') {
-          if ('name' in parsedResp) {
-            parsedResp = { command: parsedResp }
-          }
-          if (parsedResp.command) {
-            this.staging_tool = parsedResp.command
+        if (plan && Array.isArray(plan)) {
+          if (
+            plan.length === 0 ||
+            (plan.length === 1 && plan[0].replace('-', '').length === 0)
+          ) {
+            this.staging_tool = { name: 'task_complete', args: {} }
             this.staging_response = parsedResp
-            this.state = AgentStates.TOOL_STAGED
+            this.state = AgentStates.STOP
+          }
+        } else {
+          if (typeof parsedResp === 'object') {
+            if ('name' in parsedResp) {
+              parsedResp = { command: parsedResp }
+            }
+            if (parsedResp.command) {
+              this.staging_tool = parsedResp.command
+              this.staging_response = parsedResp
+              this.state = AgentStates.TOOL_STAGED
+            } else {
+              this.state = AgentStates.IDLE
+            }
           } else {
             this.state = AgentStates.IDLE
           }
-        } else {
-          this.state = AgentStates.IDLE
         }
-      }
 
-      const progress = await parsedResp.thoughts?.progress
-      if (progress) {
-        if (typeof plan === 'string') {
-          this.progress.push(progress)
-        } else if (Array.isArray(progress)) {
-          this.progress.push(...progress)
+        const progress = await parsedResp.thoughts?.progress
+        if (progress) {
+          if (typeof plan === 'string') {
+            this.progress.push(progress)
+          } else if (Array.isArray(progress)) {
+            this.progress.push(...progress)
+          }
         }
-      }
 
-      this.plan = await parsedResp.thoughts?.plan
-      if (plan) {
-        if (typeof plan === 'string') {
-          this.plan = [plan]
-        } else if (Array.isArray(plan)) {
-          this.plan = plan
+        this.plan = await parsedResp.thoughts?.plan
+        if (plan) {
+          if (typeof plan === 'string') {
+            this.plan = [plan]
+          } else if (Array.isArray(plan)) {
+            this.plan = plan
+          }
         }
-      }
-    } catch { }
+      } catch {}
+    } else {
+      console.log({ resp })
+    }
 
     this.history.push({ role: 'user', content: message })
     this.history.push({
@@ -444,7 +454,7 @@ class Agent {
     const prompt = []
     prompt.push(this.personaPrompt())
     if (this.#tools.length > 0) {
-      prompt.push(this.toolsPrompt());
+      prompt.push(this.toolsPrompt())
     }
     if (this.goals.length > 0) {
       prompt.push(this.goalsPrompt())
@@ -531,29 +541,34 @@ class Agent {
    * @returns {string} The tool prompt.
    */
   toolsPrompt() {
-    const prompt = [];
-    prompt.push("Commands:");
+    const prompt = []
+    prompt.push('Commands:')
     for (let i = 0; i < this.#tools.length; i++) {
       // @ts-ignore
-      const tool = new this.#tools[i]();
-      tool.agent = this;
-      prompt.push(`${i + 1}. ${tool.prompt()}`);
+      const tool = new this.#tools[i]()
+      tool.agent = this
+      prompt.push(`${i + 1}. ${tool.prompt()}`)
     }
     const taskCompleteCommand = {
-      name: "task_complete",
-      description: "Execute when all tasks are completed. This will terminate the session.",
+      name: 'task_complete',
+      description:
+        'Execute when all tasks are completed. This will terminate the session.',
       args: {},
-      responseFormat: { success: "true" },
-    };
+      responseFormat: { success: 'true' },
+    }
     const doNothingCommand = {
-      name: "do_nothing",
-      description: "Do nothing.",
+      name: 'do_nothing',
+      description: 'Do nothing.',
       args: {},
-      responseFormat: { response: "Nothing Done." },
-    };
-    prompt.push(`${this.#tools.length + 2}. ${JSON.stringify(taskCompleteCommand)}`);
-    prompt.push(`${this.#tools.length + 3}. ${JSON.stringify(doNothingCommand)}`);
-    return prompt.join("\n") + "\n";
+      responseFormat: { response: 'Nothing Done.' },
+    }
+    prompt.push(
+      `${this.#tools.length + 2}. ${JSON.stringify(taskCompleteCommand)}`
+    )
+    prompt.push(
+      `${this.#tools.length + 3}. ${JSON.stringify(doNothingCommand)}`
+    )
+    return prompt.join('\n') + '\n'
   }
 
   /**
@@ -582,18 +597,15 @@ class Agent {
       try {
         return JSON.parse(s)
       } catch (error) {
-
         s = s.substring(s.indexOf('{'), s.lastIndexOf('}') + 1)
 
         try {
           return JSON.parse(s)
         } catch (error) {
-
           try {
             s = s.replace(/\n/g, ' ')
             return s
           } catch (error) {
-
             try {
               return `${s}}`
             } catch (error) {
@@ -716,7 +728,9 @@ class Agent {
 
     if (this.#tools) {
       for (const [k, tool] of Object.entries(this.#tools)) {
-        const identifier = tool.identifier.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase()
+        const identifier = tool.identifier
+          .replace(/([a-z])([A-Z])/g, '$1_$2')
+          .toLowerCase()
         if (identifier === toolId) {
           found = true
           break
@@ -724,9 +738,7 @@ class Agent {
       }
     }
 
-
     if (!found) {
-      // Updated response
       const resp = `The command "${toolId}" is not available. Please choose a different command.`
       this.history.push({
         role: 'system',
@@ -737,11 +749,19 @@ class Agent {
 
     try {
       // @ts-ignore
-      const tool = this.#tools.find((_tool) => _tool.identifier.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase() === toolId)
+      const tool = this.#tools.find(
+        (_tool) =>
+          _tool.identifier.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase() ===
+          toolId
+      )
+      // @ts-ignore
       const resp = await new tool().run(kwargs)
+      console.log({ tool_resp: resp })
       this.history.push({
         role: 'system',
-        content: `Command "${toolId}" with args ${JSON.stringify(args)} returned:\n${JSON.stringify(resp)}`,
+        content: `Command "${toolId}" with args ${JSON.stringify(
+          args
+        )} returned:\n${JSON.stringify(resp)}`,
       })
       return resp
     } catch (e) {
@@ -771,5 +791,5 @@ function assert(condition, message) {
 }
 
 module.exports = {
-  Agent
+  Agent,
 }

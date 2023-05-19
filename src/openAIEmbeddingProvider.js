@@ -4,16 +4,15 @@
 for text using the OpenAI API. */
 class OpenAIEmbeddingProvider {
   /**
-   * This is a constructor function that initializes an object with a model and an API key.
-   * @param [model=text-embedding-ada-002] - The model parameter is a string that represents the name
-   * or identifier of a text embedding model. This model is used to convert text data into numerical
-   * vectors that can be used for various natural language processing tasks such as sentiment analysis,
-   * text classification, and language translation.
-   * @param [apiKey=null] - The apiKey parameter is a string that represents an API key that may be
-   * required to access certain resources or services. It is set to null by default, which means that
-   * the code may not require an API key to function properly.
+   * This is a constructor function that takes an API key and a model as parameters.
+   * @param {string} apiKey - The apiKey parameter is a string that represents the API key required to access
+   * the OpenAI API. This key is used to authenticate and authorize the user to access the API
+   * services.
+   * @param {string} [model=text-embedding-ada-002] - The model parameter is a string that specifies the name of
+   * the language model to be used for text analysis. In this case, the default model is
+   * 'text-embedding-ada-002'.
    */
-  constructor(model = 'text-embedding-ada-002', apiKey = null) {
+  constructor(apiKey, model = 'text-embedding-ada-002') {
     this.model = model
     this.apiKey = apiKey
   }
@@ -68,7 +67,6 @@ class OpenAIEmbeddingProvider {
   }
 }
 
-
 module.exports = {
-  OpenAIEmbeddingProvider
+  OpenAIEmbeddingProvider,
 }

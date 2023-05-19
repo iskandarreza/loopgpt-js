@@ -8,6 +8,7 @@
   "description": "A Javascript implementation of LoopGPT",
   "main": "src/index.js",
   "scripts": {
+    "prettier": "npx prettier --write --no-semi --single-quote \"**/*.{js,md}\"",
     "build": "webpack --mode production"
   },
   "keywords": [

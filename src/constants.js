@@ -51,6 +51,39 @@ const AgentStates = {
   STOP: 'STOP',
 }
 
+/**
+ * @typedef {object} keyConfig
+ * @property {object} keys
+ * @property {{ googleApiKey: string; googleCxId: string; }} keys.google
+ * @property {object} keys.openai
+ * @property {string} keys.openai.apiKey
+ */
+
+/**
+ * Constructor function for creating a KeyConfig object.
+ * @constructor
+ * @param {string} googleApiKey - The Google API key.
+ * @param {string} googleCxId - The Google CX ID.
+ * @param {string} openaiApiKey - The OpenAI API key.
+ */
+class KeyConfig {
+  /**
+   * @param {string} googleApiKey
+   * @param {string} googleCxId
+   * @param {string} openaiApiKey
+   */
+  constructor(googleApiKey, googleCxId, openaiApiKey) {
+    this.keys = {
+      google: {
+        googleApiKey,
+        googleCxId,
+      },
+      openai: {
+        apiKey: openaiApiKey,
+      },
+    }
+  }
+}
 
 module.exports = {
   DEFAULT_AGENT_NAME,
@@ -59,4 +92,5 @@ module.exports = {
   NEXT_PROMPT,
   INIT_PROMPT,
   AgentStates,
+  KeyConfig,
 }

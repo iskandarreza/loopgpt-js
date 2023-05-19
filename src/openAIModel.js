@@ -2,7 +2,6 @@
 /* The OpenAIModel class is a JavaScript class that represents a language model object and provides
 methods for generating responses to messages and counting tokens. */
 
-
 /**
  * @typedef {Object} maxTokens
  * @property {number} [max_tokens]
@@ -13,21 +12,20 @@ methods for generating responses to messages and counting tokens. */
 such as model name, API key, and API URL, and methods for generating AI-generated responses and
 counting tokens. */
 class OpenAIModel {
-
   /**
    * @param {string} value
    */
-  #apiKey = 'API_KEY_NOT_SET';
+  #apiKey = 'API_KEY_NOT_SET'
 
   getApiKey() {
-    return this.#apiKey;
+    return this.#apiKey
   }
 
   /**
    * @param {string} value
    */
   setApiKey(value) {
-    this.#apiKey = value;
+    this.#apiKey = value
   }
 
   /**
@@ -36,18 +34,23 @@ class OpenAIModel {
    * @param {string} [model=gpt-3.5-turbo] - The model parameter is a string that specifies the OpenAI language
    * model to use for generating responses. In this case, the default value is 'gpt-3.5-turbo', but it
    * can be changed to any other supported model.
-   * @param {string|null} [apiKey=null] - The API key is a unique identifier that allows access to a specific OpenAI
+   * @param {string} apiKey - The API key is a unique identifier that allows access to a specific OpenAI
    * API. It is required to make API requests and authenticate the user.
-   * @param {string} [apiUrl] - The `apiUrl` parameter is a string that represents the URL of the OpenAI API
-   * endpoint that will be used to make requests for chat completions. If this parameter is not
-   * provided, the default URL `https://api.openai.com/v1/chat/completions` will be used.
    */
-  constructor(model = 'gpt-3.5-turbo', apiKey = null, apiUrl) {
+  /**
+   * This is a constructor function that initializes an OpenAI chatbot with a specified API key and
+   * model.
+   * @param {string} apiKey - The API key is a unique identifier that allows access to OpenAI's API services. It
+   * is required to make requests to the OpenAI API.
+   * @param {string} [model=gpt-3.5-turbo] - The model parameter is a string that specifies the OpenAI language
+   * model to use for generating text. In this case, the default model is 'gpt-3.5-turbo'.
+   */
+  constructor(apiKey, model = 'gpt-3.5-turbo') {
     this.model = model
     /**
      * @type {string}
      */
-    this.apiUrl = apiUrl || 'https://api.openai.com/v1/chat/completions'
+    this.apiUrl = 'https://api.openai.com/v1/chat/completions'
     if (apiKey !== null) {
       this.setApiKey(apiKey)
     } else {
@@ -170,11 +173,13 @@ class OpenAIModel {
    * based on the value of `this.model`. The token limit is returned as an integer value.
    */
   getTokenLimit() {
-    return {
-      'gpt-3.5-turbo': 4000,
-      'gpt-4': 8000,
-      'gpt-4-32k': 32000,
-    }[this.model] || 0
+    return (
+      {
+        'gpt-3.5-turbo': 4000,
+        'gpt-4': 8000,
+        'gpt-4-32k': 32000,
+      }[this.model] || 0
+    )
   }
 
   /**
@@ -190,18 +195,19 @@ class OpenAIModel {
   }
 
   /**
-   * This function returns a new OpenAIModel object using the model and apiKey specified in the config
+   * This function returns a new OpenAIModel object using the apiKey and model specified in the config
    * parameter.
-   * @param {{ model: string | undefined; apiKey: string | undefined; }} config - The `config` parameter is an object that contains the configuration information
-  needed to create a new `OpenAIModel` instance. It has two properties:
-   * @returns A new instance of the `OpenAIModel` class with the `model` and `apiKey` properties set to
-  the values provided in the `config` object.
+   * @param {{apiKey: string; model: string;}} config - The `config` parameter is an object that contains the necessary information to
+   * create a new `OpenAIModel` instance. It should have the following properties:
+   * @returns The `fromConfig` method is returning a new instance of the `OpenAIModel` class with the
+   * `apiKey` and `model` properties set based on the `config` object passed as an argument. However,
+   * the code snippet is incomplete as there is a missing argument after `config.model`.
    */
   static fromConfig(config) {
-    return new OpenAIModel(config.model, config.apiKey)
+    return new OpenAIModel(config.apiKey, config.model)
   }
 }
 
 module.exports = {
-  OpenAIModel
+  OpenAIModel,
 }

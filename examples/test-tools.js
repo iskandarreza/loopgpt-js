@@ -1,5 +1,5 @@
-const loopgpt = require('../dist/index')
-const { Tools } = loopgpt;
+const loopgpt = require('../src/index.js')
+const { Tools } = loopgpt
 
 const tools = new Tools()
 
@@ -10,8 +10,11 @@ async function testTool() {
   const scraper = new browsingTools[1]()
   const search = new browsingTools[0]()
 
-  const searchResults = await search.run("California wildflowers")
-  const scraperResults = await scraper.run('https://www.cnps.org/conservation/california-wildflowers', 'Why are wildflowers important?')
+  const searchResults = await search.run('California wildflowers')
+  const scraperResults = await scraper.run({
+    url: 'https://www.cnps.org/conservation/california-wildflowers',
+    question: 'Why are wildflowers important?',
+  })
 
   console.log(JSON.stringify(searchResults, null, 4))
   console.log({ scraperResults })

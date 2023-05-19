@@ -3,22 +3,20 @@
  */
 class BaseTool {
   /**
-   * We need to pass in a string for the identifier, because minification will destroy the class name 
+   * We need to pass in a string for the identifier, because minification will destroy the class name
    * and so we cannot rely on `this.constructor.name`
    * @param {string} identifier
    */
   constructor(identifier) {
     this.toolName = identifier
-    /**
-     * @type {string|undefined}
-     */
+    this.identifier = identifier
   }
   /**
    * Unique identifier for the tool.
    * @type {string}
    */
   get id() {
-    return this.toolName.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+    return this.toolName.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase()
   }
 
   /**
@@ -26,7 +24,7 @@ class BaseTool {
    * @type {string}
    */
   get desc() {
-    return this.toolName.replace(/([a-z])([A-Z])/g, '$1 $2');
+    return this.toolName.replace(/([a-z])([A-Z])/g, '$1 $2')
   }
 
   /**
@@ -34,7 +32,7 @@ class BaseTool {
    * @type {Object.<string, string>}
    */
   get args() {
-    throw new Error('Not implemented');
+    throw new Error('Not implemented')
   }
 
   /**
@@ -42,7 +40,7 @@ class BaseTool {
    * @type {Object.<string, string>}
    */
   get resp() {
-    throw new Error('Not implemented');
+    throw new Error('Not implemented')
   }
 
   /**
@@ -55,7 +53,7 @@ class BaseTool {
       description: this.desc,
       args: this.args,
       response_format: this.resp,
-    });
+    })
   }
 
   /**
@@ -66,18 +64,8 @@ class BaseTool {
     return {
       class: this.toolName,
       type: 'tool',
-    };
+    }
   }
-
-  /**
-   * Creates an instance of the tool from its configuration.
-   * @param {Object} config - The configuration object.
-   * @returns {BaseTool} An instance of the tool.
-   */
-  // static fromConfig(config) {
-  //   return new this(config.name);
-  // }
 }
-
 
 module.exports = BaseTool
