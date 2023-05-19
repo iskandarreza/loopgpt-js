@@ -1,16 +1,9 @@
 const BaseTool = require('./baseToolClass.js')
 
 class WebSearch extends BaseTool {
-  /**
-   * Represents a WebSearch object.
-   * @constructor
-   * @param {string|null} [apiKey] - The API key for accessing the Google API. (optional)
-   * @param {string|null} [cxId] - The CX ID for the Google Custom Search Engine. (optional)
-   */
-  constructor(apiKey = null, cxId = null) {
-    super('WebSearch');
-    this.googleApiKey = null || apiKey;
-    this.googleCxId = null || cxId;
+  static identifier = 'WebSearch'
+  constructor() {
+    super(WebSearch.identifier);
     /**
      * @type {{ memory: { add: (arg0: string) => void; }; } | undefined}
      */
@@ -39,7 +32,7 @@ class WebSearch extends BaseTool {
    * @param {string | number | boolean} query
    */
   async googleSearch(query, numResults = 8) {
-
+    // @ts-ignore
     const apiUrl = `https://www.googleapis.com/customsearch/v1?key=${this.googleApiKey}&cx=${this.googleCxId}&q=${encodeURIComponent(query)}`
     const response = await fetch(apiUrl);
     const data = await response.json();
@@ -70,15 +63,14 @@ class WebSearch extends BaseTool {
     }
   }
 
-
   /**
    * Executes the search.
-   * @param {string} query - The search query.
-   * @param {number} numResults - The number of results to retrieve.
+   * @param {object} args - The args object.
+   * @param {string} args.query - The search query.
+   * @param {number} [args.numResults] - The number of results to retrieve.
    * @returns {Promise<any>} The search results. The search results as a string.
    */
-  async run(query, numResults = 8) {
-    // const results = (await this.duckduckgoSearch(query, numResults)).results;
+  async run({ query, numResults = 8 }) {
     const results = (await this.googleSearch(query, numResults)).results
     return { results };
   }

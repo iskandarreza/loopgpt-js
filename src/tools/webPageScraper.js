@@ -1,8 +1,9 @@
 const BaseTool = require('./baseToolClass.js');
 
 class WebPageScraper extends BaseTool {
+  static identifier = 'WebPageScraper'
   constructor() {
-    super('WebPageScraper');
+    super(WebPageScraper.identifier);
   }
 
   /**

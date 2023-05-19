@@ -3,19 +3,22 @@
  */
 class BaseTool {
   /**
-   * We need to pass in a string for the name, because minification will destroy the class name 
+   * We need to pass in a string for the identifier, because minification will destroy the class name 
    * and so we cannot rely on `this.constructor.name`
-   * @param {string} name
+   * @param {string} identifier
    */
-  constructor(name) {
-    this.name = name
+  constructor(identifier) {
+    this.toolName = identifier
+    /**
+     * @type {string|undefined}
+     */
   }
   /**
    * Unique identifier for the tool.
    * @type {string}
    */
   get id() {
-    return this.name.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+    return this.toolName.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
   }
 
   /**
@@ -23,7 +26,7 @@ class BaseTool {
    * @type {string}
    */
   get desc() {
-    return this.name.replace(/([a-z])([A-Z])/g, '$1 $2');
+    return this.toolName.replace(/([a-z])([A-Z])/g, '$1 $2');
   }
 
   /**
@@ -61,7 +64,7 @@ class BaseTool {
    */
   config() {
     return {
-      class: this.constructor.name,
+      class: this.toolName,
       type: 'tool',
     };
   }
@@ -75,5 +78,6 @@ class BaseTool {
   //   return new this(config.name);
   // }
 }
+
 
 module.exports = BaseTool

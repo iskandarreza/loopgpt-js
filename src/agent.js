@@ -11,43 +11,37 @@ const {
 
 const { LocalMemory } = require("./localMemory.js");
 const { OpenAIEmbeddingProvider } = require("./openAIEmbeddingProvider.js");
+const { Tools } = require("./tools.js");
 
 /**
- * @typedef {Object} AgentConfig
- * @property {string} [name]
- * @property {string} [description]
- * @property {string[]} [goals]
- * @property {OpenAIModel} [model]
- * @property {{ [s: string]: any; } | ArrayLike<any>} [tools]
- * @property {*} [embedding_provider]
- * @property {number} [temperature]
+ * @typedef {any} keys
  */
 
-// /**
-//  * @typedef {Object} OpenAIModel
-//  * @property {Function} chat - Async method for conducting a chat conversation.
-//  * @property {Function} countTokens - Method for counting the number of tokens in a text string.
-//  * @property {Function} getTokenLimit - Method for getting the token limit of the model.
-//  * @property {Function} config - Method for getting the configuration of the model.
-//  */
-
-
-/**
- * Creates an instance of a LoopGPT Agent class
- * @date 5/16/2023 - 9:24:36 AM
- *
- * @class Agent
- * @typedef {Agent}
- */
-// @ts-ignore
 class Agent {
   /**
+     * @type {keys}
+     */
+  #keys; // hold keys in this private prop
+
+  /**
+     * @type {string | ArrayLike<any> | { [s: string]: any; }}
+     */
+  #tools
+
+  /**
    * Creates an instance of a LoopGPT Agent.
-   * @date 5/16/2023 - 9:24:36 AM
-   *
+   * @class Agent
    * @constructor
-   * @param {AgentConfig} config
-   */
+   * @param {object} config - The configuration object for initializing the Agent class.
+   * @param {string} [config.name] - The name of the agent. (optional)
+   * @param {string} [config.description] - The description of the agent. (optional)
+   * @param {string[]} [config.goals] - The goals associated with the agent. (optional)
+   * @param {OpenAIModel} [config.model] - The OpenAI model for the agent. (optional)
+   * @param {{ [s: string]: any; } | ArrayLike<any>} [config.tools] - The tools associated with the agent. (optional)
+   * @param {*} [config.embedding_provider] - The embedding provider for the agent. (optional)
+   * @param {number} [config.temperature] - The temperature value for generating responses. (optional)
+   * @param {keys} [config.keys] - The keys object containing model-related keys.
+  */
   constructor({
     name = DEFAULT_AGENT_NAME,
     description = DEFAULT_AGENT_DESCRIPTION,
@@ -56,11 +50,13 @@ class Agent {
     tools = undefined,
     embedding_provider = null,
     temperature = 0.8,
+    keys = {}
   } = {}) {
+    this.#keys = keys
     this.name = name
     this.description = description
     this.goals = goals || []
-    this.model = model || new OpenAIModel('gpt-3.5-turbo')
+    this.model = new OpenAIModel('gpt-3.5-turbo', keys.openai.apiKey, keys.openai.apiUrl) || model || undefined
     this.embedding_provider =
       embedding_provider || new OpenAIEmbeddingProvider()
     this.temperature = temperature
@@ -87,25 +83,24 @@ class Agent {
     this.constraints = []
     this.state = AgentStates.START
     /**
-     * @type {{ [s: string]: any; } | ArrayLike<any>}
+     * @type {string | ArrayLike<any> | { [s: string]: any; }}
      */
-    this._tools = tools || []
+    this.#tools = tools || new Tools().browsingTools(keys.google) || []
+
+    const toolsInfo = new Tools().browsingTools().reduce((accumulator, tool) => {
+      // @ts-ignore
+      accumulator.push(JSON.parse(new tool().prompt()));
+      return accumulator;
+    }, [])
+
+    this.tools = toolsInfo || []
   }
 
   /**
-   * Sets the tools for the agent.
-   * @param {string | ArrayLike<any> | { [s: string]: any; }} _tools - The tools to be set.
+   * @param {{ [s: string]: any; } | ArrayLike<any>} tools
    */
-  set tools(_tools) {
-    this._tools = _tools;
-  }
-
-  /**
-   * Gets the tools of the agent.
-   * @returns {string | ArrayLike<any> | { [s: string]: any; }} The tools of the agent.
-   */
-  get tools() {
-    return this._tools;
+  set _tools(tools) {
+    this.#tools = tools
   }
 
   /**
@@ -448,9 +443,9 @@ class Agent {
   headerPrompt() {
     const prompt = []
     prompt.push(this.personaPrompt())
-    // if (this.tools.length > 0) {
-    //   prompt.push(this.toolsPrompt());
-    // }
+    if (this.#tools.length > 0) {
+      prompt.push(this.toolsPrompt());
+    }
     if (this.goals.length > 0) {
       prompt.push(this.goalsPrompt())
     }
@@ -538,9 +533,9 @@ class Agent {
   toolsPrompt() {
     const prompt = [];
     prompt.push("Commands:");
-    for (let i = 0; i < this.tools.length; i++) {
+    for (let i = 0; i < this.#tools.length; i++) {
       // @ts-ignore
-      const tool = new this.tools[i]();
+      const tool = new this.#tools[i]();
       tool.agent = this;
       prompt.push(`${i + 1}. ${tool.prompt()}`);
     }
@@ -556,8 +551,8 @@ class Agent {
       args: {},
       responseFormat: { response: "Nothing Done." },
     };
-    prompt.push(`${this.tools.length + 2}. ${JSON.stringify(taskCompleteCommand)}`);
-    prompt.push(`${this.tools.length + 3}. ${JSON.stringify(doNothingCommand)}`);
+    prompt.push(`${this.#tools.length + 2}. ${JSON.stringify(taskCompleteCommand)}`);
+    prompt.push(`${this.#tools.length + 3}. ${JSON.stringify(doNothingCommand)}`);
     return prompt.join("\n") + "\n";
   }
 
@@ -670,7 +665,7 @@ class Agent {
    * met in the code. It can return a string response or an object response depending on the command
    * and arguments provided. The specific response returned is indicated in the code comments.
    */
-  runStagingTool() {
+  async runStagingTool() {
     if (!this.staging_tool.hasOwnProperty('name')) {
       const resp =
         'Command name not provided. Make sure to follow the specified response format.'
@@ -719,14 +714,16 @@ class Agent {
     const kwargs = this.staging_tool.args
     let found = false
 
-    if (this.tools && typeof this.tools === 'object') {
-      for (const [k, tool] of Object.entries(this.tools)) {
-        if (k === toolId) {
+    if (this.#tools) {
+      for (const [k, tool] of Object.entries(this.#tools)) {
+        const identifier = tool.identifier.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase()
+        if (identifier === toolId) {
           found = true
           break
         }
       }
     }
+
 
     if (!found) {
       // Updated response
@@ -740,13 +737,11 @@ class Agent {
 
     try {
       // @ts-ignore
-      const tool = this.tools[toolId]
-      const resp = tool.run(kwargs)
+      const tool = this.#tools.find((_tool) => _tool.identifier.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase() === toolId)
+      const resp = await new tool().run(kwargs)
       this.history.push({
         role: 'system',
-        content: `Command "${toolId}" with args ${JSON.stringify(
-          args
-        )} returned:\n${JSON.stringify(resp)}`,
+        content: `Command "${toolId}" with args ${JSON.stringify(args)} returned:\n${JSON.stringify(resp)}`,
       })
       return resp
     } catch (e) {

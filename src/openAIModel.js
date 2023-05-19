@@ -13,7 +13,7 @@ methods for generating responses to messages and counting tokens. */
 such as model name, API key, and API URL, and methods for generating AI-generated responses and
 counting tokens. */
 class OpenAIModel {
-  
+
   /**
    * @param {string} value
    */
@@ -29,7 +29,7 @@ class OpenAIModel {
   setApiKey(value) {
     this.#apiKey = value;
   }
-  
+
   /**
    * This is a constructor function that initializes an OpenAI chatbot with a specified model and API
    * key.
