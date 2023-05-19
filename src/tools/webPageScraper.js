@@ -97,7 +97,6 @@ class WebPageScraper extends BaseTool {
       const { result } = await data
       // @ts-ignore
       const text = result[selector]
-      console.log({ data, result, text })
 
       return text
     } catch (error) {
@@ -148,16 +147,17 @@ class WebPageScraper extends BaseTool {
       const message = [
         {
           role: 'user',
-          content: `Summarize this partial chunk, ${currentChunkNumber} of ${totalChunks} from a webpage titled: ${title}`,
+          content: `Summarize the following, ${currentChunkNumber} of ${totalChunks}, from a webpage titled: ${title}`,
         },
         { role: 'user', content: `${chunk}` },
-      ]
+      ];
+
 
       const response = await this.openAIComplete(message)
       if (response.error) {
         console.log(response.error)
       } else {
-        console.log(JSON.stringify(response, null, 4))
+        console.log(JSON.stringify(response.usage, null, 4))
         const summary = response.choices[0].message.content
         summaries.push(summary)
       }
@@ -179,38 +179,38 @@ class WebPageScraper extends BaseTool {
    * @param {number} maxTokens
    */
   splitTextIntoChunks(text, maxTokens) {
-    const chunks = []
-    let currentChunk = ''
-    const sentences = text.split(/[.:]\s*\n|\s*,\s+/)
+    const chunks = [];
+    const sentences = text.split(/[.:]\s*\n|\s*,\s+/);
+    let currentChunk = '';
 
     for (const sentence of sentences) {
-      const sentenceTokens = sentence.split(/\s+/).length
+      const sentenceTokens = this.countTokens(sentence);
 
       if (currentChunk.length + sentenceTokens < maxTokens) {
-        currentChunk += sentence + '.'
+        currentChunk += sentence + '.';
       } else {
         if (currentChunk !== '') {
-          chunks.push(currentChunk.trim())
-          currentChunk = ''
+          chunks.push(currentChunk.trim());
+          currentChunk = '';
         }
 
         if (sentenceTokens >= maxTokens) {
           const sentenceChunks = this.splitLongSentenceIntoChunks(
             sentence,
             maxTokens
-          )
-          chunks.push(...sentenceChunks)
+          );
+          chunks.push(...sentenceChunks);
         } else {
-          currentChunk = sentence + '.'
+          chunks.push(sentence + '.');
         }
       }
     }
 
     if (currentChunk !== '') {
-      chunks.push(currentChunk.trim())
+      chunks.push(currentChunk.trim());
     }
 
-    return chunks
+    return chunks;
   }
 
   /**
@@ -218,30 +218,46 @@ class WebPageScraper extends BaseTool {
    * @param {number} maxTokens
    */
   splitLongSentenceIntoChunks(sentence, maxTokens) {
-    const words = sentence.split(/\s+/)
-    const chunks = []
-    let currentChunk = ''
+    const words = sentence.split(/\s+/);
+    const chunks = [];
+    let currentChunk = '';
+    let currentTokenCount = 0;
 
     for (const word of words) {
-      const wordTokens = word.split(/\s+/).length
-      const chunkTokens = currentChunk.split(/\s+/).length
+      const wordTokens = this.countTokens(word);
+      const chunkTokens = currentTokenCount;
 
       if (chunkTokens + wordTokens < maxTokens) {
-        currentChunk += word + ' '
+        currentChunk += word + ' ';
+        currentTokenCount += wordTokens;
       } else {
         if (currentChunk !== '') {
-          chunks.push(currentChunk.trim())
-          currentChunk = ''
+          chunks.push(currentChunk.trim());
+          currentChunk = '';
+          currentTokenCount = 0;
         }
-        currentChunk = word + ' '
+        currentChunk = word + ' ';
+        currentTokenCount = wordTokens;
       }
     }
 
     if (currentChunk !== '') {
-      chunks.push(currentChunk.trim())
+      chunks.push(currentChunk.trim());
     }
 
-    return chunks
+    return chunks;
+  }
+
+  /**
+   * @param {string} text
+   */
+  countTokens(text) {
+    // Basic heuristic to estimate token count
+    const wordCount = text.split(/\s+/).length;
+    const punctuationCount = text.split(/[.,;!?]/).length - 1;
+    const tokenCount = wordCount + punctuationCount;
+
+    return tokenCount;
   }
 
   /**
@@ -252,7 +268,7 @@ class WebPageScraper extends BaseTool {
       // @ts-ignore
       const response = new OpenAIModel(this.openaiApiKey)
       const results = await response.chat(prompt, {
-        max_tokens: response.getTokenLimit(),
+        max_tokens: 3000,
       })
 
       return results
