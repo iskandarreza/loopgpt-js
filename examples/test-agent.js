@@ -2,7 +2,6 @@ const loopgpt = require('../dist/index')
 const { Agent } = loopgpt;
 
 async function initLoop() {
-
   // you could save the api key(s) on a server and fetch it when needed
   const apiKeyResponse = await fetch('/api/openai', {
     method: 'POST'
@@ -21,6 +20,7 @@ async function initLoop() {
     }
   }
 
+
   // Create a new instance of the Agent class
   const agent = new Agent({
     keys: keys,
@@ -31,9 +31,10 @@ async function initLoop() {
 
   const chat = async () => {
     let response;
+    response = await agent.chat({ message: null });
 
     while (response?.command?.name !== 'task_complete') {
-      response = await agent.chat({ message: null });
+      response = await agent.chat({ run_tool: true });
       console.log(agent);
       console.log(response);
     }

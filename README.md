@@ -41,9 +41,10 @@ async function initLoop() {
 
   const chat = async () => {
     let response
+    response = await agent.chat({ message: null })
 
     while (response?.command?.name !== 'task_complete') {
-      response = await agent.chat({ message: null })
+      response = await agent.chat({ run_tool: true })
       console.log(agent)
       console.log(response)
     }
