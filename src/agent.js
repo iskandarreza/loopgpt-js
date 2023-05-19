@@ -9,8 +9,8 @@ const {
   NEXT_PROMPT,
 } = require('./constants.js')
 
-const { LocalMemory } = require('./localMemory.js')
-const { OpenAIEmbeddingProvider } = require('./openAIEmbeddingProvider.js')
+const { LocalMemory } = require('./memory/localMemory.js')
+const { OpenAIEmbeddingProvider } = require('./embeddings/openai.js')
 const { Tools } = require('./tools.js')
 const BaseTool = require('./tools/baseToolClass.js')
 
@@ -58,15 +58,9 @@ class Agent {
       config.model ||
       undefined
     this.embedding_provider =
-      config.embedding_provider ||
-      new OpenAIEmbeddingProvider(
-        this.model.config().model,
-        config.keys.openai.apiKey
-      )
+      config.embedding_provider || new OpenAIEmbeddingProvider(openaiApiKey)
     this.temperature = config.temperature || 0.8
-    this.memory = new LocalMemory({
-      embedding_provider: this.embedding_provider,
-    })
+    this.memory = new LocalMemory(this.embedding_provider)
     /**
      * @type {{ role: string; content: any; }[]}
      */
@@ -227,7 +221,7 @@ class Agent {
         entry.content = JSON.stringify(respd, null, 2)
         // @ts-ignore
         hist[i] = entry
-      } catch (e) {}
+      } catch (e) { }
     })
     /**
      * @type {number[]}
@@ -377,7 +371,7 @@ class Agent {
     )
 
     let parsedResp
-    if (resp.choices[0]) {
+    if (resp?.choices) {
       parsedResp = resp.choices[0].message.content
 
       try {
@@ -427,7 +421,7 @@ class Agent {
             this.plan = plan
           }
         }
-      } catch {}
+      } catch { }
     } else {
       console.log({ resp })
     }
@@ -755,7 +749,7 @@ class Agent {
           toolId
       )
       // @ts-ignore
-      const resp = await new tool().run(kwargs)
+      const resp = await new tool(this.agent).run(kwargs)
       console.log({ tool_resp: resp })
       this.history.push({
         role: 'system',

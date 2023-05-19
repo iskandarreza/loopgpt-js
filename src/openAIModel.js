@@ -127,44 +127,24 @@ class OpenAIModel {
    * @returns the total number of tokens in the messages array, based on the model being used.
    */
   countTokens(messages) {
-    // Can't get tiktoken to load with a web worker...
-    // const [tokens_per_message, tokens_per_name] = {
-    //   'gpt-3.5-turbo': [4, -1],
-    //   'gpt-4': [3, -1],
-    //   'gpt-4-32k': [3, -1],
-    // }[this.model];
-    // const enc = encoding_for_model(this.model);
-    // let num_tokens = 0;
-    // for (const message of messages) {
-    //   num_tokens += tokens_per_message;
-    //   for (const [key, value] of Object.entries(message)) {
-    //     num_tokens += enc.encode(value).length;
-    //     if (key === "name") {
-    //       num_tokens += tokens_per_name;
-    //     }
-    //   }
-    // }
-    // num_tokens += 3;
-    // return num_tokens;
-
-    // oversimplied implementation
     const modelTokens = {
       'gpt-3.5-turbo': 4,
       'gpt-4': 3,
       'gpt-4-32k': 3,
-    }[this.model]
+    }[this.model] ?? 0; // Use 0 as the default value if modelTokens is null or undefined
 
-    let numTokens = 0
+    let numTokens = 0;
     for (const message of messages) {
-      // @ts-ignore
-      numTokens += modelTokens
-      for (const value of Object.values(message)) {
-        numTokens += value.split(/\s+/).length
+      if (message) {
+        numTokens += modelTokens ?? 0; // Use 0 as the default value if modelTokens is null or undefined
+        for (const value of Object.values(message)) {
+          numTokens += value.split(/\s+/).length;
+        }
+        numTokens += 3; // Add tokens for start and end sequences
       }
-      numTokens += 3 // Add tokens for start and end sequences
     }
 
-    return numTokens
+    return numTokens;
   }
 
   /**

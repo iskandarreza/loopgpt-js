@@ -1,13 +1,14 @@
+const Agent = require('../agent.js').Agent
 const BaseTool = require('./baseToolClass.js')
 
 class WebSearch extends BaseTool {
   static identifier = 'WebSearch'
-  constructor(agent = null) {
+  /**
+   * @param {Agent|undefined} [agent]
+   */
+  constructor(agent) {
     super(WebSearch.identifier)
-    /**
-     * @type {{ memory: { add: (arg0: string) => void; }; } | undefined}
-     */
-    this.agent = agent || undefined
+    this.memory = agent?.memory || null
   }
 
   /**
@@ -37,7 +38,7 @@ class WebSearch extends BaseTool {
       // @ts-ignore
       this.googleApiKey
       // @ts-ignore
-    }&cx=${this.googleCxId}&q=${encodeURIComponent(query)}`
+      }&cx=${this.googleCxId}&q=${encodeURIComponent(query)}`
     const response = await fetch(apiUrl)
     const data = await response.json()
 
@@ -59,13 +60,13 @@ class WebSearch extends BaseTool {
    * @param {(string | null | undefined)[][]} results - The search results.
    */
   _addToMemory(query, results) {
-    if (this.agent) {
+    if (this.memory) {
       let entry = `Search result for ${query}:\n`
       for (const r of results) {
         entry += `\t${r[0]}: ${r[1]}\n`
       }
       entry += '\n'
-      this.agent.memory.add(entry)
+      this.memory.add(entry)
     }
   }
 
