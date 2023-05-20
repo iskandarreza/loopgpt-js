@@ -38,7 +38,7 @@ class WebSearch extends BaseTool {
       // @ts-ignore
       this.googleApiKey
       // @ts-ignore
-      }&cx=${this.googleCxId}&q=${encodeURIComponent(query)}`
+    }&cx=${this.googleCxId}&q=${encodeURIComponent(query)}`
     const response = await fetch(apiUrl)
     const data = await response.json()
 

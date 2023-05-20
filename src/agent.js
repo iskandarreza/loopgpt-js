@@ -65,8 +65,8 @@ class Agent {
      * @type {{ role: string; content: any; }[]}
      */
     this.history = []
-    this.init_prompt = config.init_prompt || INIT_PROMPT
-    this.next_prompt = config.next_prompt || NEXT_PROMPT
+    this.init_prompt = config.init_prompt || INIT_PROMPT || undefined
+    this.next_prompt = config.next_prompt || NEXT_PROMPT || undefined
     /**
      * @type {any[]}
      */
@@ -100,6 +100,32 @@ class Agent {
    */
   set _tools(tools) {
     this.#tools = tools
+  }
+
+  /**
+   * This function takes in two boolean parameters and returns a modified configuration object with
+   * compressed history.
+   * @param {boolean} [init_prompt=false] - A boolean value indicating whether or not to include the initial
+   * prompt in the configuration object.
+   * @param {boolean} [next_prompt=false] - The "next_prompt" parameter is a boolean value that determines
+   * whether or not a prompt should be displayed for the next input after the initial input. If set to
+   * "true", a prompt will be displayed for each subsequent input. If set to "false", no prompt will be
+   * displayed for subsequent inputs.
+   * @returns {Agent} The `config` object with the `init_prompt` and `next_prompt` properties removed if their
+   * corresponding arguments are `false`, and with the `history` property set to the compressed history
+   * obtained from the `getCompressedHistory()` method.
+   */
+  config(init_prompt = false, next_prompt = false) {
+    const clone = { ...this }
+
+    if (!init_prompt) {
+      delete clone.init_prompt
+    }
+    if (!next_prompt) {
+      delete clone.next_prompt
+    }
+    clone.history = this.getCompressedHistory()
+    return clone
   }
 
   /**

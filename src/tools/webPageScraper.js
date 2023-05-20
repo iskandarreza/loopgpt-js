@@ -127,91 +127,89 @@ class WebPageScraper extends BaseTool {
    * @param {string} title
    */
   async summarizeTextChunks(text, title) {
-    const maxTokens = 1500;
-    const delayBetweenCalls = 4000; // Delay in milliseconds
-    const chunks = this.splitTextIntoChunks(text, maxTokens);
-    const totalChunks = chunks.length;
-    let currentChunkNumber = 1;
-    const summaries = [];
+    const maxTokens = 1500
+    const delayBetweenCalls = 10000 // Delay in milliseconds
+    const chunks = this.splitTextIntoChunks(text, maxTokens)
+    const totalChunks = chunks.length
+    let currentChunkNumber = 1
+    const summaries = []
 
     // Function to introduce a delay
     /**
      * @param {number} ms
      */
     function sleep(ms) {
-      return new Promise((resolve) => setTimeout(resolve, ms));
+      return new Promise((resolve) => setTimeout(resolve, ms))
     }
 
     // Iterate over each chunk and make API calls for summarization
     for (const chunk of chunks) {
-      console.log({ chunk, title, currentChunkNumber, totalChunks });
+      console.log({ chunk, title, currentChunkNumber, totalChunks })
       const message = [
         {
           role: 'user',
           content: `Summarize the following, ${currentChunkNumber} of ${totalChunks}, from a webpage titled: ${title}`,
         },
         { role: 'user', content: `${chunk}` },
-      ];
+      ]
 
-      const response = await this.openAIComplete(message);
+      const response = await this.openAIComplete(message)
       if (response.error) {
-        console.log(response.error);
+        console.log(response.error)
       } else {
-        console.log(JSON.stringify(response.usage, null, 4));
-        const summary = response.choices[0].message.content;
-        summaries.push(summary);
+        console.log(JSON.stringify(response.usage, null, 4))
+        const summary = response.choices[0].message.content
+        summaries.push(summary)
       }
 
-      currentChunkNumber++;
+      currentChunkNumber++
 
       // Introduce a delay between API calls
-      await sleep(delayBetweenCalls);
+      await sleep(delayBetweenCalls)
     }
 
-    let combinedSummary = summaries.join(' ');
+    let combinedSummary = summaries.join(' ')
 
-    console.log({ summaryTokenCount: this.countTokens(combinedSummary) });
+    console.log({ summaryTokenCount: this.countTokens(combinedSummary) })
 
     // Check if the combined summary still exceeds the token limit
     if (this.countTokens(combinedSummary) > maxTokens) {
-      const summaryChunks = this.splitTextIntoChunks(combinedSummary, maxTokens);
-      const summarySummaries = [];
+      const summaryChunks = this.splitTextIntoChunks(combinedSummary, maxTokens)
+      const summarySummaries = []
 
       // Iterate over each summary chunk and make API calls for summarization
       for (const chunk of summaryChunks) {
-        console.log({ chunk, currentChunkNumber, totalChunks });
+        console.log({ chunk, currentChunkNumber, totalChunks })
         const message = [
           {
             role: 'user',
             content: `Summarize the following, continued ${currentChunkNumber} of ${totalChunks}`,
           },
           { role: 'user', content: `${chunk}` },
-        ];
+        ]
 
-        const response = await this.openAIComplete(message);
+        const response = await this.openAIComplete(message)
         if (response.error) {
-          console.log(response.error);
+          console.log(response.error)
         } else {
-          console.log(JSON.stringify(response.usage, null, 4));
-          const summary = response.choices[0].message.content;
-          summarySummaries.push(summary);
+          console.log(JSON.stringify(response.usage, null, 4))
+          const summary = response.choices[0].message.content
+          summarySummaries.push(summary)
         }
 
-        currentChunkNumber++;
+        currentChunkNumber++
 
         // Introduce a delay between API calls
-        await sleep(delayBetweenCalls);
+        await sleep(delayBetweenCalls)
       }
 
-      combinedSummary = summarySummaries.join(' ');
+      combinedSummary = summarySummaries.join(' ')
     }
 
-    console.log({ summaryTokenCount: this.countTokens(combinedSummary) });
+    console.log({ summaryTokenCount: this.countTokens(combinedSummary) })
 
-    return combinedSummary;
+    return combinedSummary
   }
-
-
 
   // Function to split the text into chunks
   /**
@@ -308,7 +306,7 @@ class WebPageScraper extends BaseTool {
       // @ts-ignore
       const response = new OpenAIModel(this.openaiApiKey)
       const results = await response.chat(prompt, {
-        max_tokens: 3000,
+        max_tokens: 3000 * 0.8, // add margin
       })
 
       return results
@@ -338,6 +336,10 @@ class WebPageScraper extends BaseTool {
       if (results) {
         title = JSON.stringify(pagetitle)
         text = JSON.stringify(results)
+        // add logic here to determine if this will be summarized now or later based on 
+        // token count, if above a certain threshold, save it for later
+        // if later, save the text somewhere and not it in memory that the unsummarized 
+        // text has been saved [title, url, localStorage key]
         text = await this.summarizeTextChunks(text, question)
         links.push(url) // TODO: use another tool to grab links, currently only pushing in page url
         // @ts-ignore

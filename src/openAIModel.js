@@ -127,24 +127,27 @@ class OpenAIModel {
    * @returns the total number of tokens in the messages array, based on the model being used.
    */
   countTokens(messages) {
-    const modelTokens = {
-      'gpt-3.5-turbo': 4,
-      'gpt-4': 3,
-      'gpt-4-32k': 3,
-    }[this.model] ?? 0; // Use 0 as the default value if modelTokens is null or undefined
+    const modelTokens =
+      {
+        'gpt-3.5-turbo': 4,
+        'gpt-4': 3,
+        'gpt-4-32k': 3,
+      }[this.model] ?? 0 // Use 0 as the default value if modelTokens is null or undefined
 
-    let numTokens = 0;
+    let numTokens = 0
     for (const message of messages) {
       if (message) {
-        numTokens += modelTokens ?? 0; // Use 0 as the default value if modelTokens is null or undefined
+        numTokens += modelTokens ?? 0 // Use 0 as the default value if modelTokens is null or undefined
         for (const value of Object.values(message)) {
-          numTokens += value.split(/\s+/).length;
+          if (value) {
+            numTokens += value.split(/\s+/).length
+          }
         }
-        numTokens += 3; // Add tokens for start and end sequences
+        numTokens += 3 // Add tokens for start and end sequences
       }
     }
 
-    return numTokens;
+    return numTokens
   }
 
   /**

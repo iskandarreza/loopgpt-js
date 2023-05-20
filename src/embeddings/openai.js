@@ -27,7 +27,11 @@ class OpenAIEmbeddingProvider extends BaseEmbeddingProvider {
       model: this.model,
     })
 
-    const response = await fetch(url, { method: 'POST', headers, body })
+    const response = await this.makeRateLimitedRequest(url, {
+      method: 'POST',
+      headers,
+      body,
+    })
 
     if (!response.ok) {
       throw new Error(
@@ -36,11 +40,44 @@ class OpenAIEmbeddingProvider extends BaseEmbeddingProvider {
     }
 
     const data = await response.json()
-    console.log({ response, data })
-
     return data
-    // return data.data[0].embedding.map((value) => parseFloat(value))
   }
+
+  /**
+   * @param {RequestInfo | URL} url
+   * @param {RequestInit | undefined} options
+   */
+  async makeRateLimitedRequest(url, options) {
+    const delayBetweenCalls = 4000 // Delay in milliseconds
+
+    // Function to introduce a delay
+    /**
+     * @param {number | undefined} ms
+     */
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms))
+    }
+
+    // Make the API request with rate limiting
+    async function makeRequest() {
+      const response = await fetch(url, options)
+      const rateLimitRemaining = response.headers.get('x-ratelimit-remaining')
+      const rateLimitReset = response.headers.get('x-ratelimit-reset') || ''
+
+      if (rateLimitRemaining === '0') {
+        // Sleep until the rate limit reset time if the limit is reached
+        const currentTime = Math.floor(Date.now() / 1000)
+        const resetTime = parseInt(rateLimitReset)
+        const sleepTime = (resetTime - currentTime) * 1000
+        await sleep(sleepTime)
+      }
+
+      return response
+    }
+
+    return makeRequest()
+  }
+
 
   /**
    * Returns the configuration of the OpenAI embedding provider as an object.
