@@ -20,7 +20,6 @@ module.exports = {
   resolve: {
     extensions: ['.js'],
     fallback: {
-      path: require.resolve('path-browserify'),
       fs: false,
     },
   },

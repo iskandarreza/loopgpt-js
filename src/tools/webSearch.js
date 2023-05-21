@@ -1,5 +1,6 @@
 const Agent = require('../agent.js').Agent
 const BaseTool = require('./baseToolClass.js')
+const saveTextToIndexedDB = require('../utils/saveTextToIndexedDB.js')
 
 class WebSearch extends BaseTool {
   static identifier = 'WebSearch'
@@ -38,7 +39,7 @@ class WebSearch extends BaseTool {
       // @ts-ignore
       this.googleApiKey
       // @ts-ignore
-    }&cx=${this.googleCxId}&q=${encodeURIComponent(query)}`
+      }&cx=${this.googleCxId}&q=${encodeURIComponent(query)}`
     const response = await fetch(apiUrl)
     const data = await response.json()
 
@@ -51,6 +52,15 @@ class WebSearch extends BaseTool {
       })
     )
 
+    for (const { title, link: url, snippet } of results) {
+      const context = {
+        title,
+        url,
+        question: query,
+      }
+      await saveTextToIndexedDB('web_search_results', context, snippet)
+    }
+
     return results
   }
 
@@ -59,16 +69,16 @@ class WebSearch extends BaseTool {
    * @param {string} query - The search query.
    * @param {(string | null | undefined)[][]} results - The search results.
    */
-  _addToMemory(query, results) {
-    if (this.memory) {
-      let entry = `Search result for ${query}:\n`
-      for (const r of results) {
-        entry += `\t${r[0]}: ${r[1]}\n`
-      }
-      entry += '\n'
-      this.memory.add(entry)
-    }
-  }
+  // _addToMemory(query, results) {
+  //   if (this.memory) {
+  //     let entry = `Search result for ${query}:\n`
+  //     for (const r of results) {
+  //       entry += `\t${r[0]}: ${r[1]}\n`
+  //     }
+  //     entry += '\n'
+  //     this.memory.add(entry)
+  //   }
+  // }
 
   /**
    * Executes the search.

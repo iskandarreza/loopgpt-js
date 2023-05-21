@@ -117,7 +117,9 @@
     "src/tools.js",
     "src/tools/baseToolClass.js",
     "src/tools/webSearch.js",
-    "src/tools/webPageScraper.js"
+    "src/tools/webPageScraper.js",
+    "src/utils/openDatabase.js",
+    "src/utils/saveTextToIndexedDB.js"
   ],
   "exclude": [
     "./examples/**/*",

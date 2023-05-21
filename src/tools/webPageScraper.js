@@ -1,6 +1,9 @@
 const Agent = require('../agent.js').Agent
 const { OpenAIModel } = require('../openAIModel.js')
 const BaseTool = require('./baseToolClass.js')
+const countTokens = require('../utils/countTokens.js')
+const openDatabase = require('../utils/openDatabase.js')
+const saveTextToIndexedDB = require('../utils/saveTextToIndexedDB.js')
 
 class WebPageScraper extends BaseTool {
   static identifier = 'WebPageScraper'
@@ -111,23 +114,23 @@ class WebPageScraper extends BaseTool {
    * @param {string} pagetitle - The search query.
    * @param {(string | null | undefined)[][]} summary - The search results.
    */
-  _addToMemory(pagetitle, summary) {
-    if (this.memory) {
-      let entry = `Summary for ${pagetitle}:\n`
-      for (const r of summary) {
-        entry += `\t${r[0]}: ${r[1]}\n`
-      }
-      entry += '\n'
-      this.memory.add(entry)
-    }
-  }
+  // _addToMemory(pagetitle, summary) {
+  //   if (this.memory) {
+  //     let entry = `Summary for ${pagetitle}:\n`
+  //     for (const r of summary) {
+  //       entry += `\t${r[0]}: ${r[1]}\n`
+  //     }
+  //     entry += '\n'
+  //     this.memory.add(entry)
+  //   }
+  // }
 
   /**
    * @param {string} text
    * @param {string} title
    */
   async summarizeTextChunks(text, title) {
-    const maxTokens = 1500
+    const maxTokens = 1000
     const delayBetweenCalls = 10000 // Delay in milliseconds
     const chunks = this.splitTextIntoChunks(text, maxTokens)
     const totalChunks = chunks.length
@@ -170,10 +173,10 @@ class WebPageScraper extends BaseTool {
 
     let combinedSummary = summaries.join(' ')
 
-    console.log({ summaryTokenCount: this.countTokens(combinedSummary) })
+    console.log({ summaryTokenCount: countTokens(combinedSummary) })
 
     // Check if the combined summary still exceeds the token limit
-    if (this.countTokens(combinedSummary) > maxTokens) {
+    if (countTokens(combinedSummary) > maxTokens) {
       const summaryChunks = this.splitTextIntoChunks(combinedSummary, maxTokens)
       const summarySummaries = []
 
@@ -206,7 +209,7 @@ class WebPageScraper extends BaseTool {
       combinedSummary = summarySummaries.join(' ')
     }
 
-    console.log({ summaryTokenCount: this.countTokens(combinedSummary) })
+    console.log({ summaryTokenCount: countTokens(combinedSummary) })
 
     return combinedSummary
   }
@@ -222,7 +225,7 @@ class WebPageScraper extends BaseTool {
     let currentChunk = ''
 
     for (const sentence of sentences) {
-      const sentenceTokens = this.countTokens(sentence)
+      const sentenceTokens = countTokens(sentence)
 
       if (currentChunk.length + sentenceTokens < maxTokens) {
         currentChunk += sentence + '.'
@@ -262,7 +265,7 @@ class WebPageScraper extends BaseTool {
     let currentTokenCount = 0
 
     for (const word of words) {
-      const wordTokens = this.countTokens(word)
+      const wordTokens = countTokens(word)
       const chunkTokens = currentTokenCount
 
       if (chunkTokens + wordTokens < maxTokens) {
@@ -284,18 +287,6 @@ class WebPageScraper extends BaseTool {
     }
 
     return chunks
-  }
-
-  /**
-   * @param {string} text
-   */
-  countTokens(text) {
-    // Basic heuristic to estimate token count
-    const wordCount = text.split(/\s+/).length
-    const punctuationCount = text.split(/[.,;!?]/).length - 1
-    const tokenCount = wordCount + punctuationCount
-
-    return tokenCount
   }
 
   /**
@@ -322,38 +313,135 @@ class WebPageScraper extends BaseTool {
    * @returns {Promise<{ text: string | null, links: (string|null)[] }>} The scraped data and summarized text.
    */
   async run({ url, question }) {
-    let title = null
-    let text = null
+    let title = ''
+    let text = ''
+
+    let context = {
+      title,
+      url,
+      question,
+    }
     /**
      * @type {(string | null)[]}
      */
     let links = []
+
+    // Save the text for later summarization
+    const saveForLater = async () => {
+      const localStorageKey = await saveTextToIndexedDB(
+        'unsummarized_texts',
+        context,
+        text
+      )
+      text = `Information saved for later summarization, key: '${localStorageKey}'`
+    }
 
     try {
       const pagetitle = await this.scrapeWebPageAPI(url, 'title')
       const results = await this.scrapeWebPageAPI(url, 'body')
 
       if (results) {
-        title = JSON.stringify(pagetitle)
+        context.title = JSON.stringify(pagetitle)
         text = JSON.stringify(results)
-        // add logic here to determine if this will be summarized now or later based on 
-        // token count, if above a certain threshold, save it for later
-        // if later, save the text somewhere and not it in memory that the unsummarized 
-        // text has been saved [title, url, localStorage key]
-        text = await this.summarizeTextChunks(text, question)
+
+        const tokenCount = countTokens(text)
+        const maxTokensThreshold = 1000 // Threshold for immediate summarization
+        const rateLimitThreshold = 10000 // Maximum tokens to process within the rate limit
+
+        if (tokenCount > maxTokensThreshold) {
+          if (tokenCount <= rateLimitThreshold) {
+            // Calculate parallelization
+            try {
+              const parallelProcesses = Math.ceil(
+                tokenCount / rateLimitThreshold
+              )
+              text = await this.parallelizeSummarization(
+                context,
+                text,
+                parallelProcesses
+              )
+            } catch (error) {
+              console.error('Error occurred calculating parallelization', error)
+              await saveForLater()
+            }
+          } else {
+            await saveForLater()
+          }
+        } else {
+          // Summarize the text immediately
+          text = await this.summarizeTextChunks(text, question)
+        }
+
         links.push(url) // TODO: use another tool to grab links, currently only pushing in page url
-        // @ts-ignore
-        this._addToMemory(title, text)
+        // Save the summarized text in IndexedDB
+        await saveTextToIndexedDB('web_page_scraper_results', context, text)
       }
     } catch (apiError) {
       console.error(
         'An error occurred while scraping the web page using the API method:',
         apiError
       )
+
+      throw Error('Critical error, threads should be ended')
     }
 
     return { text, links }
   }
+
+  /**
+   * Parallelizes the summarization process.
+   * @param {{ title: string; url: string; question: string; }} context
+   * @param {string} text
+   * @param {number} parallelProcesses
+   * @returns {Promise<string>} The summarized text.
+   */
+  async parallelizeSummarization(context, text, parallelProcesses) {
+    // Implement your own logic to parallelize the summarization process
+    // Spawn parallel processes or utilize concurrency mechanisms like Promise.all or worker threads
+    // Distribute the text into chunks and send them to the summarization API in parallel
+    // Aggregate the summarized chunks and return the complete summary
+    throw Error('Not implemented')
+    return 'summarized text'
+  }
 }
 
 module.exports = WebPageScraper
+
+/**
+ * Retrieves the saved text from IndexedDB using the key.
+ * @param {string} storeName The name of the object store.
+ * @param {string} key The key under which the text is saved.
+ * @returns {Promise<{ context: object, text: string }>} The saved context and text.
+ */
+async function retrieveText(storeName, key) {
+  const db = await openDatabase()
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, 'readonly')
+    const objectStore = transaction.objectStore(storeName)
+    const request = objectStore.get(key)
+
+    request.onsuccess = (
+      /** @type {{ target: { result: any; }; }} */ event
+    ) => {
+      // @ts-ignore
+      const data = event.target ? event.target.result : null
+      if (data) {
+        resolve(data)
+      } else {
+        reject(new Error('Text not found'))
+      }
+    }
+
+    request.onerror = (/** @type {{ target: { error: any; }; }} */ event) => {
+      // @ts-ignore
+      const error = event.target ? event.target.error : null
+      reject(
+        error ||
+        new Error(
+          'An error occurred while retrieving the text from the database.'
+        )
+      )
+    }
+  })
+}

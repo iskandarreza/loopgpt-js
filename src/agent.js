@@ -247,7 +247,7 @@ class Agent {
         entry.content = JSON.stringify(respd, null, 2)
         // @ts-ignore
         hist[i] = entry
-      } catch (e) { }
+      } catch (e) {}
     })
     /**
      * @type {number[]}
@@ -447,9 +447,26 @@ class Agent {
             this.plan = plan
           }
         }
-      } catch { }
+      } catch {}
     } else {
+      // If we're here, we got major issues.
       console.log({ resp })
+      let elseResp
+      if (resp?.error) {
+        if (resp.error.message === 'Critical error, threads should be ended') {
+          throw Error(resp.error.message)
+        }
+        console.error({ error: resp.error })
+        elseResp = {
+          role: 'system',
+          content: { errorCode: resp.error.code, message: resp.error.message },
+        }
+      } else {
+        // elseResp = { role: 'system', content: JSON.stringify(resp) }
+        elseResp = { role: 'system', content: 'Unhandled error' }
+      }
+      this.history.push(elseResp)
+      return elseResp
     }
 
     this.history.push({ role: 'user', content: message })
@@ -775,7 +792,7 @@ class Agent {
           toolId
       )
       // @ts-ignore
-      const resp = await new tool(this.agent).run(kwargs)
+      const resp = await new tool().run(kwargs)
       console.log({ tool_resp: resp })
       this.history.push({
         role: 'system',

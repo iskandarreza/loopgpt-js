@@ -78,7 +78,6 @@ class OpenAIEmbeddingProvider extends BaseEmbeddingProvider {
     return makeRequest()
   }
 
-
   /**
    * Returns the configuration of the OpenAI embedding provider as an object.
    * @returns {{model: string; apiKey: string}} - Configuration object
