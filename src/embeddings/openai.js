@@ -1,14 +1,17 @@
 const { BaseEmbeddingProvider } = require('../embeddings/provider.js')
 
 class OpenAIEmbeddingProvider extends BaseEmbeddingProvider {
+  static identifier = 'OpenAIEmbeddingProvider'
+
+  #apiKey
   /**
    * OpenAI Embedding Provider
    * @param {string} openaiApiKey
    */
   constructor(openaiApiKey) {
-    super()
+    super(OpenAIEmbeddingProvider.identifier)
     this.model = 'text-embedding-ada-002'
-    this.apiKey = openaiApiKey
+    this.#apiKey = openaiApiKey
   }
 
   /**
@@ -20,7 +23,7 @@ class OpenAIEmbeddingProvider extends BaseEmbeddingProvider {
     const url = 'https://api.openai.com/v1/embeddings'
     const headers = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${this.apiKey}`,
+      Authorization: `Bearer ${this.#apiKey}`,
     }
     const body = JSON.stringify({
       input: text,
@@ -41,7 +44,10 @@ class OpenAIEmbeddingProvider extends BaseEmbeddingProvider {
 
     const data = await response.json()
 
-    console.info('embeddings', JSON.stringify(data?.usage, null, 4))
+    // if (data?.usage) {
+    // console.info('embeddings', JSON.stringify(data?.usage, null, 4))
+    // }
+
     return data
   }
 

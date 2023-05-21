@@ -18,7 +18,7 @@ class Summarizer {
    * @returns {Promise<string>} The summarized text.
    */
   async parallelizeSummarization(context, text, maxTokens, parallelProcesses) {
-    const chunks = Summarizer.splitTextIntoChunks(text, maxTokens)
+    const chunks = await Summarizer.splitTextIntoChunks(text, maxTokens)
     const totalChunks = chunks.length
 
     /**
@@ -72,7 +72,7 @@ class Summarizer {
       .join(' ')
 
     // Check if the combined summary still exceeds the token limit
-    if (countTokens(summarizedText) > maxTokens) {
+    if ((await countTokens(summarizedText)) > maxTokens) {
       return await this.retrySummarization(context, summarizedText, maxTokens)
     } else {
       return summarizedText
@@ -176,13 +176,13 @@ class Summarizer {
    * @param {string} text
    * @param {number} maxTokens
    */
-  static splitTextIntoChunks(text, maxTokens) {
+  static async splitTextIntoChunks(text, maxTokens) {
     const chunks = []
     const sentences = text.split(/[.:]\s*\n|\s*,\s+/)
     let currentChunk = ''
 
     for (const sentence of sentences) {
-      const sentenceTokens = countTokens(sentence)
+      const sentenceTokens = await countTokens(sentence)
 
       if (currentChunk.length + sentenceTokens < maxTokens) {
         currentChunk += sentence + '.'
@@ -193,7 +193,7 @@ class Summarizer {
         }
 
         if (sentenceTokens >= maxTokens) {
-          const sentenceChunks = this.splitLongSentenceIntoChunks(
+          const sentenceChunks = await this.splitLongSentenceIntoChunks(
             sentence,
             maxTokens
           )
@@ -215,14 +215,14 @@ class Summarizer {
    * @param {string} sentence
    * @param {number} maxTokens
    */
-  static splitLongSentenceIntoChunks(sentence, maxTokens) {
+  static async splitLongSentenceIntoChunks(sentence, maxTokens) {
     const words = sentence.split(/\s+/)
     const chunks = []
     let currentChunk = ''
     let currentTokenCount = 0
 
     for (const word of words) {
-      const wordTokens = countTokens(word)
+      const wordTokens = await countTokens(word)
       const chunkTokens = currentTokenCount
 
       if (chunkTokens + wordTokens < maxTokens) {
@@ -288,7 +288,7 @@ class Summarizer {
       ' ' +
       secondHalfSummary.choices[0].message.content
 
-    if (countTokens(combinedSummary) > maxTokens) {
+    if ((await countTokens(combinedSummary)) > maxTokens) {
       return await this.retrySummarization(context, combinedSummary, maxTokens)
     } else {
       return combinedSummary

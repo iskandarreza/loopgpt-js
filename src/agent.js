@@ -13,7 +13,7 @@ const { LocalMemory } = require('./memory/localMemory.js')
 const { OpenAIEmbeddingProvider } = require('./embeddings/openai.js')
 const { Tools } = require('./tools.js')
 const BaseTool = require('./tools/baseToolClass.js')
-const countTokens = require('./utils/countTokens.js')
+const optimizeContext = require('./utils/optimizeContext.js')
 
 /**
  * @typedef {object} keyConfig
@@ -156,6 +156,8 @@ class Agent {
    * "full_prompt" array.
    */
   async getFullPrompt(user_input = '') {
+    const maxtokens = this.model.getTokenLimit() - 1000
+
     const header = { role: 'system', content: this.headerPrompt() }
     const dtime = {
       role: 'system',
@@ -166,10 +168,11 @@ class Agent {
     const user_prompt = user_input
       ? [{ role: 'user', content: user_input }]
       : []
-    const history = this.getCompressedHistory()
+    let history = this.getCompressedHistory()
 
-    const _msgs = () => {
+    const _msgs = async () => {
       const msgs = [header, dtime]
+      let optimizedHistory
       msgs.push(...history.slice(0, -1))
       if (relevant_memory.length) {
         const memstr = relevant_memory.join('\n')
@@ -180,15 +183,17 @@ class Agent {
         msgs.push(context)
       }
       msgs.push(...history.slice(-1))
-      msgs.push(...user_prompt)
-      return msgs
+
+      optimizedHistory = await optimizeContext([...msgs], maxtokens)
+      optimizedHistory.push(...user_prompt)
+
+      return optimizedHistory
     }
 
-    const maxtokens = this.model.getTokenLimit() - 1000
     let ntokens = 0
     while (true) {
-      const msgs = _msgs()
-      ntokens += this.model.countTokens(msgs)
+      const msgs = await _msgs()
+      ntokens += await this.model.countPromptTokens(msgs)
       if (ntokens < maxtokens) {
         break
       } else {
@@ -202,7 +207,9 @@ class Agent {
       }
     }
 
-    return { full_prompt: _msgs(), token_count: ntokens }
+    console.debug({ full_prompt: await _msgs(), token_count: ntokens })
+
+    return { full_prompt: await _msgs(), token_count: ntokens }
   }
 
   /**
@@ -248,7 +255,7 @@ class Agent {
         entry.content = JSON.stringify(respd, null, 2)
         // @ts-ignore
         hist[i] = entry
-      } catch (e) { }
+      } catch (e) {}
     })
     /**
      * @type {number[]}
@@ -397,98 +404,153 @@ class Agent {
       }
     )
 
-    let parsedResp
+    let reply
+    let error
+    let usage
+    // try {
+
     if (resp?.choices) {
-      parsedResp = resp.choices[0].message.content
+      reply = resp.choices[0].message.content
+      if (resp.usage && resp.usage.total_tokens) {
+        let total_tokens = resp.usage.total_tokens
+        console.log({
+          token_count,
+          usage: resp.usage,
+          diffPercentage: Math.round(
+            ((total_tokens - token_count) / total_tokens) * 100
+          ),
+        })
+      }
+      console.log({ reply })
+    }
+
+    if (resp?.error) {
+      error = resp.error
+      console.error({ error })
+    }
+
+    if (resp?.usage) {
+      usage = resp.usage
+      console.info({ usage })
+    }
+
+    if (reply) {
+      let thoughts
+      let plan
+      let progress
+      let command
 
       try {
-        parsedResp = await this.loadJson(parsedResp)
-        let plan = await parsedResp.thoughts.plan
+        reply = JSON.parse(reply)
+        console.log('JSON.parse()', { reply })
+      } catch (error) {
+        const errMsg = 'Unable to JSON.parse() reply'
+        console.error(errMsg, error)
 
-        if (plan && Array.isArray(plan)) {
-          if (
-            plan.length === 0 ||
-            (plan.length === 1 && plan[0].replace('-', '').length === 0)
-          ) {
-            this.staging_tool = { name: 'task_complete', args: {} }
-            this.staging_response = parsedResp
-            this.state = AgentStates.STOP
-          }
-        } else {
-          if (typeof parsedResp === 'object') {
-            if ('name' in parsedResp) {
-              parsedResp = { command: parsedResp }
-            }
-            if (parsedResp.command) {
-              this.staging_tool = parsedResp.command
-              this.staging_response = parsedResp
-              this.state = AgentStates.TOOL_STAGED
-            } else {
-              this.state = AgentStates.IDLE
-            }
-          } else {
-            this.state = AgentStates.IDLE
-          }
+        // Try other ways to parse the reply
+        try {
+          reply = await this.loadJson(reply)
+        } catch (error) {
+          const errMsg = 'Unable to loadJson(reply)'
+          console.error(errMsg, error)
         }
+      }
 
-        const progress = await parsedResp.thoughts?.progress
-        if (progress) {
-          if (typeof plan === 'string') {
-            this.progress.push(progress)
-          } else if (Array.isArray(progress)) {
-            this.progress.push(...progress)
-          }
-        }
+      thoughts = await reply?.thoughts
+      plan = await thoughts?.plan
+      progress = await thoughts?.progress
+      command = await reply.command
 
-        this.plan = await parsedResp.thoughts?.plan
-        if (plan) {
-          if (typeof plan === 'string') {
-            this.plan = [plan]
-          } else if (Array.isArray(plan)) {
-            this.plan = plan
-          }
+      console.log({ plan })
+      console.log({ progress })
+
+      if (command) {
+        this.staging_tool = command
+        this.staging_response = reply
+        this.state = AgentStates.TOOL_STAGED
+      } else {
+        this.state = AgentStates.IDLE
+      }
+
+      if (plan) {
+        if (typeof plan === 'string') {
+          this.plan = [plan]
+        } else if (Array.isArray(plan)) {
+          this.plan = plan
         }
-      } catch { }
+      }
+
+      if (plan && Array.isArray(plan)) {
+        if (
+          plan.length === 0 ||
+          (plan.length === 1 && plan[0].replace('-', '').length === 0)
+        ) {
+          this.staging_tool = { name: 'task_complete', args: {} }
+          this.staging_response = reply
+          this.state = AgentStates.STOP
+        }
+      }
+      if (progress) {
+        if (typeof plan === 'string') {
+          this.progress.push(progress)
+        } else if (Array.isArray(progress)) {
+          this.progress.push(...progress)
+        }
+      }
+
+      this.history.push({ role: 'user', content: message })
+
+      return await reply
     } else {
-      // If we're here, we got major issues.
-      console.log({ UNEXPECTED_RESPONSE: resp })
-      let elseResp
+      let errorResp
       if (resp?.error) {
-        if (resp.error.message === 'Critical error, threads should be ended') {
-          throw Error(resp.error.message)
+        const { error } = resp
+        let { message, type, code, param } = error || {}
+
+        if (type === 'server_error') {
+          // handle server error
+          if (
+            message
+              .toLowerCase()
+              .includes('currently overloaded with other requests')
+          ) {
+            // attempt retry in `n` seconds
+          }
         }
-        console.error({ error: resp.error })
-        elseResp = {
+
+        if (code === 'context_length_exceeded') {
+          // handle context length exceeded
+        }
+
+        if (type === 'tokens') {
+          if (message.toLowerCase().includes('"rate limit')) {
+            throw Error(message)
+          }
+        }
+
+        errorResp = {
           role: 'system',
           content: JSON.stringify({
-            errorCode: resp.error.code,
-            message: resp.error.message,
+            error: {
+              message: message && message,
+              type: type && type,
+              code: code && code,
+              param: param && param,
+            },
           }),
         }
+
+        if (message === 'Critical error, threads should be ended') {
+          throw Error(message)
+        }
       } else {
-        elseResp = { role: 'system', content: 'Unhandled error' }
+        errorResp = { role: 'system', content: 'Unhandled error' }
       }
-      this.history.push(elseResp)
-      return elseResp
+
+      !!errorResp && console.error(errorResp)
+
+      return errorResp || resp
     }
-
-    this.history.push({ role: 'user', content: message })
-    this.history.push({
-      role: 'assistant',
-      content:
-        typeof parsedResp === 'object'
-          ? JSON.stringify(parsedResp)
-          : await parsedResp,
-    })
-
-    while (countTokens(JSON.stringify(this.history)) > max_tokens / 2) {
-      this.history = this.getCompressedHistory()
-      if (countTokens(JSON.stringify(this.history)) > max_tokens / 2) {
-        this.history.splice(1, 1) // Remove second element
-      }
-    }
-
-    return await parsedResp
   }
 
   /**
@@ -633,6 +695,8 @@ class Agent {
    */
   // @ts-ignore
   async loadJson(s, try_gpt = true) {
+    console.debug('loadJson(reply)', { reply: s })
+
     try {
       if (s.includes('Result: {')) {
         s = s.split('Result: ')[0]
@@ -705,7 +769,7 @@ class Agent {
     ]
 
     // @ts-ignore
-    const token_count = this.model.countTokens(message)
+    const token_count = await this.model.countPromptTokens(message)
     const token_limit = this.model.getTokenLimit()
     // @ts-ignore
     const max_tokens = Math.min(1000, Math.max(token_limit - token_count, 0))

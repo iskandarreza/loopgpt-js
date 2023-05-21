@@ -8,11 +8,11 @@ const saveTextToIndexedDB = require('../utils/saveTextToIndexedDB.js')
 class WebPageScraper extends BaseTool {
   static identifier = 'WebPageScraper'
   /**
-   * @param {Agent|undefined} [agent]
+   * @param {Agent} agent
    */
   constructor(agent) {
     super(WebPageScraper.identifier)
-    this.memory = agent?.memory || null
+    this.agent = agent
   }
 
   /**
@@ -105,23 +105,22 @@ class WebPageScraper extends BaseTool {
     }
   }
 
-  // _addToMemory(pagetitle, summary) {
-  //   if (this.memory) {
-  //     let entry = `Summary for ${pagetitle}:\n`
-  //     for (const r of summary) {
-  //       entry += `\t${r[0]}: ${r[1]}\n`
-  //     }
-  //     entry += '\n'
-  //     this.memory.add(entry)
-  //   }
-  // }
-
   /**
    * Executes the web page scraping and summarization.
    * @param {{url: string; question: string;}} args
-   * @returns {Promise<{ text: string | null, links: (string|null)[] }>} The scraped data and summarized text.
+   * @returns {Promise<{ text: string | null, links: (string|null)[] } | string>} The scraped data and summarized text.
    */
   async run({ url, question }) {
+    if (!url || !question) {
+      if (!url && !question) {
+        return 'Error: both url and question arguments are missing'
+      } else if (!url) {
+        return 'Error: url argument is missing'
+      } else {
+        return 'Error: question argument is missing'
+      }
+    }
+
     let title = ''
     let text = ''
 
@@ -153,7 +152,7 @@ class WebPageScraper extends BaseTool {
         context.title = JSON.stringify(pagetitle)
         text = JSON.stringify(results)
 
-        const tokenCount = countTokens(text)
+        const tokenCount = await countTokens(text)
         const maxTokensThreshold = 800 // Threshold for immediate summarization
         const rateLimitThreshold = 5000 // Maximum tokens to process within the rate limit
         // @ts-ignore
@@ -162,17 +161,23 @@ class WebPageScraper extends BaseTool {
         if (tokenCount > maxTokensThreshold) {
           if (tokenCount <= rateLimitThreshold) {
             // Calculate parallelization
+            const parallelProcesses = Math.ceil(tokenCount / rateLimitThreshold)
             try {
-              const parallelProcesses = Math.ceil(
-                tokenCount / rateLimitThreshold
-              )
               text = await summarizer.parallelizeSummarization(
                 context,
                 text,
                 maxTokensThreshold,
                 parallelProcesses
               )
+
+              console.debug({ tokenCount, parallelProcesses, text })
             } catch (error) {
+              console.error({
+                context,
+                text,
+                maxTokensThreshold,
+                parallelProcesses,
+              })
               throw Error('Error occurred calculating parallelization')
             }
           } else {
@@ -188,8 +193,12 @@ class WebPageScraper extends BaseTool {
 
         links.push(url) // TODO: use another tool to grab links, currently only pushing in page url
         // Save the summarized text in IndexedDB
-        await saveTextToIndexedDB('web_page_scraper_results', context, text)
-        // TODO: if feasible, create embeddings for the results and save to memory
+        const indexKey = await saveTextToIndexedDB(
+          'web_page_scraper_results',
+          context,
+          text
+        )
+        await this._addToMemory(pagetitle, { text, url, indexKey })
       }
     } catch (apiError) {
       console.error(
@@ -201,6 +210,18 @@ class WebPageScraper extends BaseTool {
     }
 
     return { text, links }
+  }
+
+  /**
+   * @param {any} pagetitle
+   * @param {{ text: string; url: string; indexKey: string; }} results
+   */
+  async _addToMemory(pagetitle, results) {
+    if (this.agent.memory) {
+      let entry = `Summary for ${pagetitle}:\n`
+      entry += `\t${results.text}: {${results.url}} -- ${results.indexKey}\n`
+      await this.agent.memory.add(entry)
+    }
   }
 }
 
@@ -237,9 +258,9 @@ async function retrieveText(storeName, key) {
       const error = event.target ? event.target.error : null
       reject(
         error ||
-        new Error(
-          'An error occurred while retrieving the text from the database.'
-        )
+          new Error(
+            'An error occurred while retrieving the text from the database.'
+          )
       )
     }
   })

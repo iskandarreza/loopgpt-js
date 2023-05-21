@@ -42,42 +42,54 @@ class WebSearch extends BaseTool {
     }&cx=${this.googleCxId}&q=${encodeURIComponent(query)}`
     const response = await fetch(apiUrl)
     const data = await response.json()
+    let resultsSummary
 
     // Extract the search results from the response data
     const results = await data.items?.map(
-      (/** @type {{ title: any; link: any; snippet: any; }} */ item) => ({
+      (/** @type {{ title: string; link: any; snippet: any; }} */ item) => ({
         title: item.title,
         link: item.link,
         snippet: item.snippet,
       })
     )
 
-    for (const { title, link: url, snippet } of results) {
+    let memEntry = {}
+    memEntry.query = query
+    /**
+     * @type {{ title: any; link: any; indexKey: string; }[]}
+     */
+    memEntry.entries = []
+
+    for (const { title, link, snippet } of results) {
       const context = {
         title,
-        url,
+        link,
         question: query,
       }
-      await saveTextToIndexedDB('web_search_results', context, snippet)
+      const indexKey = await saveTextToIndexedDB(
+        'web_search_results',
+        context,
+        snippet
+      )
+
+      memEntry.entries.push({ title, link, indexKey })
+
+      await this._addToMemory(memEntry)
     }
 
-    await this._addToMemory(query, results)
-    return results
+    return `Results for query "${query}" saved to memory`
   }
 
   /**
-   * Adds the search query and results to the agent's memory.
-   * @param {string} query - The search query.
-   * @param {{title: string; link: string; question: string;}[]} results - The search results.
+   * @param {{ query: string; entries: { title: string; link: string; indexKey: string; }[]; }} memEntry
    */
-  async _addToMemory(query, results) {
+  async _addToMemory(memEntry) {
     if (this.agent.memory) {
-      let entry = `Search result for ${query}:\n`
-      for (const { title, link } of results) {
-        entry += `\t${title}: ${link}\n`
+      let entry = `Search result for ${memEntry.query}:\n`
+      for (const { title, link, indexKey } of memEntry.entries) {
+        entry += `\t${title}: ${link} -- id:${indexKey}\n`
       }
       entry += '\n'
-
       await this.agent.memory.add(entry)
     }
   }

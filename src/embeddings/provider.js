@@ -2,7 +2,11 @@
 class BaseEmbeddingProvider {
   /**
    * Base class for all embedding providers.
+   * @param {string|undefined} [identifier]
    */
+  constructor(identifier) {
+    this.identifier = identifier || this.constructor.name
+  }
 
   /**
    * Retrieves the embedding for the given text.
@@ -28,7 +32,7 @@ class BaseEmbeddingProvider {
    */
   config() {
     return {
-      class: this.constructor.name,
+      class: this.identifier,
       type: 'embedding_provider',
     }
   }

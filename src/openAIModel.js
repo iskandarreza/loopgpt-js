@@ -1,6 +1,5 @@
+const countTokens = require('./utils/countTokens.js')
 // Credits to Fariz Rahman for https://github.com/farizrahman4u/loopgpt
-/* The OpenAIModel class is a JavaScript class that represents a language model object and provides
-methods for generating responses to messages and counting tokens. */
 
 /**
  * @typedef {Object} maxTokens
@@ -70,7 +69,7 @@ class OpenAIModel {
   responses. A higher temperature value will result in more diverse and unpredictable responses,
   while a lower temperature value will result in more conservative and predictable responses. The
   default value is 0.8.
-   * @returns the result of the API call made using the provided parameters (messages, maxTokens, and
+   * @returns {Promise<any>} the result of the API call made using the provided parameters (messages, maxTokens, and
   temperature) after handling any errors that may occur during the API call.
    */
   async chat(messages, maxTokens = undefined, temperature = 0.8) {
@@ -103,6 +102,10 @@ class OpenAIModel {
 
         const data = await response.json()
 
+        // if (data?.usage) {
+        // console.info('completion', JSON.stringify(data.usage, null, 4))
+        // }
+
         return data
       } catch (error) {
         // @ts-ignore
@@ -126,7 +129,7 @@ class OpenAIModel {
   as "name" and "text".
    * @returns the total number of tokens in the messages array, based on the model being used.
    */
-  countTokens(messages) {
+  async countPromptTokens(messages) {
     const modelTokens =
       {
         'gpt-3.5-turbo': 4,
@@ -140,7 +143,7 @@ class OpenAIModel {
         numTokens += modelTokens ?? 0 // Use 0 as the default value if modelTokens is null or undefined
         for (const value of Object.values(message)) {
           if (value) {
-            numTokens += value.split(/\s+/).length
+            numTokens += await countTokens(value)
           }
         }
         numTokens += 3 // Add tokens for start and end sequences
