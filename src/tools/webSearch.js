@@ -5,11 +5,11 @@ const saveTextToIndexedDB = require('../utils/saveTextToIndexedDB.js')
 class WebSearch extends BaseTool {
   static identifier = 'WebSearch'
   /**
-   * @param {Agent|undefined} [agent]
+   * @param {Agent} agent
    */
   constructor(agent) {
     super(WebSearch.identifier)
-    this.memory = agent?.memory || null
+    this.memory = agent.memory
   }
 
   /**
@@ -32,7 +32,7 @@ class WebSearch extends BaseTool {
   }
 
   /**
-   * @param {string | number | boolean} query
+   * @param {string} query
    */
   async googleSearch(query, numResults = 8) {
     const apiUrl = `https://www.googleapis.com/customsearch/v1?key=${
@@ -61,24 +61,28 @@ class WebSearch extends BaseTool {
       await saveTextToIndexedDB('web_search_results', context, snippet)
     }
 
+    await this._addToMemory(query, results)
     return results
   }
 
   /**
    * Adds the search query and results to the agent's memory.
    * @param {string} query - The search query.
-   * @param {(string | null | undefined)[][]} results - The search results.
+   * @param {{title: string; link: string; question: string;}[]} results - The search results.
    */
-  // _addToMemory(query, results) {
-  //   if (this.memory) {
-  //     let entry = `Search result for ${query}:\n`
-  //     for (const r of results) {
-  //       entry += `\t${r[0]}: ${r[1]}\n`
-  //     }
-  //     entry += '\n'
-  //     this.memory.add(entry)
-  //   }
-  // }
+  async _addToMemory(query, results) {
+    console.log({ results })
+    if (this.memory) {
+      let entry = `Search result for ${query}:\n`
+      for (const { title, link } of results) {
+        entry += `\t${title}: ${link}\n`
+        console.log({ memoryEntry: entry, memory: this.memory })
+      }
+      entry += '\n'
+
+      await this.memory.add(entry)
+    }
+  }
 
   /**
    * Executes the search.

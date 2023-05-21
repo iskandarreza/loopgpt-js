@@ -13,6 +13,7 @@ const { LocalMemory } = require('./memory/localMemory.js')
 const { OpenAIEmbeddingProvider } = require('./embeddings/openai.js')
 const { Tools } = require('./tools.js')
 const BaseTool = require('./tools/baseToolClass.js')
+const countTokens = require('./utils/countTokens.js')
 
 /**
  * @typedef {object} keyConfig
@@ -162,6 +163,7 @@ class Agent {
     }
     const msgs = this._getNonUserMessages(10)
     const relevant_memory = this.memory.get(msgs.toString(), 5)
+    console.log({ relevant_memory })
     const user_prompt = user_input
       ? [{ role: 'user', content: user_input }]
       : []
@@ -247,7 +249,7 @@ class Agent {
         entry.content = JSON.stringify(respd, null, 2)
         // @ts-ignore
         hist[i] = entry
-      } catch (e) {}
+      } catch (e) { }
     })
     /**
      * @type {number[]}
@@ -447,7 +449,7 @@ class Agent {
             this.plan = plan
           }
         }
-      } catch {}
+      } catch { }
     } else {
       // If we're here, we got major issues.
       console.log({ resp })
@@ -459,7 +461,10 @@ class Agent {
         console.error({ error: resp.error })
         elseResp = {
           role: 'system',
-          content: { errorCode: resp.error.code, message: resp.error.message },
+          content: JSON.stringify({
+            errorCode: resp.error.code,
+            message: resp.error.message,
+          }),
         }
       } else {
         // elseResp = { role: 'system', content: JSON.stringify(resp) }
@@ -477,6 +482,15 @@ class Agent {
           ? JSON.stringify(parsedResp)
           : await parsedResp,
     })
+
+    while (countTokens(JSON.stringify(this.history)) > max_tokens / 2) {
+      this.history = this.getCompressedHistory()
+      if (countTokens(JSON.stringify(this.history)) > max_tokens / 2) {
+        this.history.splice(1, 1) // Remove second element
+      }
+    }
+
+    console.log({ parsedResp })
 
     return await parsedResp
   }
@@ -792,7 +806,7 @@ class Agent {
           toolId
       )
       // @ts-ignore
-      const resp = await new tool().run(kwargs)
+      const resp = await new tool(this).run(kwargs)
       console.log({ tool_resp: resp })
       this.history.push({
         role: 'system',

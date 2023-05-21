@@ -1,6 +1,6 @@
 const Agent = require('../agent.js').Agent
-const { OpenAIModel } = require('../openAIModel.js')
 const BaseTool = require('./baseToolClass.js')
+const Summarizer = require('../utils/summarizer.js')
 const countTokens = require('../utils/countTokens.js')
 const openDatabase = require('../utils/openDatabase.js')
 const saveTextToIndexedDB = require('../utils/saveTextToIndexedDB.js')
@@ -75,9 +75,6 @@ class WebPageScraper extends BaseTool {
         .map((element) => element.getAttribute('href'))
         .slice(0, 5)
 
-      // Convert HTML to Markdown
-      // const turndownService = new TurndownService();
-      // const markdown = turndownService.turndown(doc.documentElement);
       text = doc.textContent
 
       return { links, text }
@@ -88,8 +85,8 @@ class WebPageScraper extends BaseTool {
   }
 
   /**
-   * @param {string | number | boolean} url
-   * @param {string | number | boolean} selector
+   * @param {string} url
+   * @param {string} selector
    */
   async scrapeWebPageAPI(url, selector) {
     try {
@@ -99,8 +96,7 @@ class WebPageScraper extends BaseTool {
       const response = await fetch(apiUrl)
       const data = await response.json()
       const { result } = await data
-      // @ts-ignore
-      const text = result[selector]
+      const text = result ? result[selector] : 'No data'
 
       return text
     } catch (error) {
@@ -109,11 +105,6 @@ class WebPageScraper extends BaseTool {
     }
   }
 
-  /**
-   * Adds the web page summary to the agent's memory.
-   * @param {string} pagetitle - The search query.
-   * @param {(string | null | undefined)[][]} summary - The search results.
-   */
   // _addToMemory(pagetitle, summary) {
   //   if (this.memory) {
   //     let entry = `Summary for ${pagetitle}:\n`
@@ -124,188 +115,6 @@ class WebPageScraper extends BaseTool {
   //     this.memory.add(entry)
   //   }
   // }
-
-  /**
-   * @param {string} text
-   * @param {string} title
-   */
-  async summarizeTextChunks(text, title) {
-    const maxTokens = 1000
-    const delayBetweenCalls = 10000 // Delay in milliseconds
-    const chunks = this.splitTextIntoChunks(text, maxTokens)
-    const totalChunks = chunks.length
-    let currentChunkNumber = 1
-    const summaries = []
-
-    // Function to introduce a delay
-    /**
-     * @param {number} ms
-     */
-    function sleep(ms) {
-      return new Promise((resolve) => setTimeout(resolve, ms))
-    }
-
-    // Iterate over each chunk and make API calls for summarization
-    for (const chunk of chunks) {
-      console.log({ chunk, title, currentChunkNumber, totalChunks })
-      const message = [
-        {
-          role: 'user',
-          content: `Summarize the following, ${currentChunkNumber} of ${totalChunks}, from a webpage titled: ${title}`,
-        },
-        { role: 'user', content: `${chunk}` },
-      ]
-
-      const response = await this.openAIComplete(message)
-      if (response.error) {
-        console.log(response.error)
-      } else {
-        console.log(JSON.stringify(response.usage, null, 4))
-        const summary = response.choices[0].message.content
-        summaries.push(summary)
-      }
-
-      currentChunkNumber++
-
-      // Introduce a delay between API calls
-      await sleep(delayBetweenCalls)
-    }
-
-    let combinedSummary = summaries.join(' ')
-
-    console.log({ summaryTokenCount: countTokens(combinedSummary) })
-
-    // Check if the combined summary still exceeds the token limit
-    if (countTokens(combinedSummary) > maxTokens) {
-      const summaryChunks = this.splitTextIntoChunks(combinedSummary, maxTokens)
-      const summarySummaries = []
-
-      // Iterate over each summary chunk and make API calls for summarization
-      for (const chunk of summaryChunks) {
-        console.log({ chunk, currentChunkNumber, totalChunks })
-        const message = [
-          {
-            role: 'user',
-            content: `Summarize the following, continued ${currentChunkNumber} of ${totalChunks}`,
-          },
-          { role: 'user', content: `${chunk}` },
-        ]
-
-        const response = await this.openAIComplete(message)
-        if (response.error) {
-          console.log(response.error)
-        } else {
-          console.log(JSON.stringify(response.usage, null, 4))
-          const summary = response.choices[0].message.content
-          summarySummaries.push(summary)
-        }
-
-        currentChunkNumber++
-
-        // Introduce a delay between API calls
-        await sleep(delayBetweenCalls)
-      }
-
-      combinedSummary = summarySummaries.join(' ')
-    }
-
-    console.log({ summaryTokenCount: countTokens(combinedSummary) })
-
-    return combinedSummary
-  }
-
-  // Function to split the text into chunks
-  /**
-   * @param {string} text
-   * @param {number} maxTokens
-   */
-  splitTextIntoChunks(text, maxTokens) {
-    const chunks = []
-    const sentences = text.split(/[.:]\s*\n|\s*,\s+/)
-    let currentChunk = ''
-
-    for (const sentence of sentences) {
-      const sentenceTokens = countTokens(sentence)
-
-      if (currentChunk.length + sentenceTokens < maxTokens) {
-        currentChunk += sentence + '.'
-      } else {
-        if (currentChunk !== '') {
-          chunks.push(currentChunk.trim())
-          currentChunk = ''
-        }
-
-        if (sentenceTokens >= maxTokens) {
-          const sentenceChunks = this.splitLongSentenceIntoChunks(
-            sentence,
-            maxTokens
-          )
-          chunks.push(...sentenceChunks)
-        } else {
-          chunks.push(sentence + '.')
-        }
-      }
-    }
-
-    if (currentChunk !== '') {
-      chunks.push(currentChunk.trim())
-    }
-
-    return chunks
-  }
-
-  /**
-   * @param {string} sentence
-   * @param {number} maxTokens
-   */
-  splitLongSentenceIntoChunks(sentence, maxTokens) {
-    const words = sentence.split(/\s+/)
-    const chunks = []
-    let currentChunk = ''
-    let currentTokenCount = 0
-
-    for (const word of words) {
-      const wordTokens = countTokens(word)
-      const chunkTokens = currentTokenCount
-
-      if (chunkTokens + wordTokens < maxTokens) {
-        currentChunk += word + ' '
-        currentTokenCount += wordTokens
-      } else {
-        if (currentChunk !== '') {
-          chunks.push(currentChunk.trim())
-          currentChunk = ''
-          currentTokenCount = 0
-        }
-        currentChunk = word + ' '
-        currentTokenCount = wordTokens
-      }
-    }
-
-    if (currentChunk !== '') {
-      chunks.push(currentChunk.trim())
-    }
-
-    return chunks
-  }
-
-  /**
-   * @param {{ role: string; content: string; }[]} prompt
-   */
-  async openAIComplete(prompt) {
-    try {
-      // @ts-ignore
-      const response = new OpenAIModel(this.openaiApiKey)
-      const results = await response.chat(prompt, {
-        max_tokens: 3000 * 0.8, // add margin
-      })
-
-      return results
-    } catch (error) {
-      console.error('Error:', error)
-      throw new Error('Failed to make the API call.')
-    }
-  }
 
   /**
    * Executes the web page scraping and summarization.
@@ -345,8 +154,10 @@ class WebPageScraper extends BaseTool {
         text = JSON.stringify(results)
 
         const tokenCount = countTokens(text)
-        const maxTokensThreshold = 1000 // Threshold for immediate summarization
-        const rateLimitThreshold = 10000 // Maximum tokens to process within the rate limit
+        const maxTokensThreshold = 800 // Threshold for immediate summarization
+        const rateLimitThreshold = 5000 // Maximum tokens to process within the rate limit
+        // @ts-ignore
+        const summarizer = new Summarizer(this.openaiApiKey)
 
         if (tokenCount > maxTokensThreshold) {
           if (tokenCount <= rateLimitThreshold) {
@@ -355,25 +166,30 @@ class WebPageScraper extends BaseTool {
               const parallelProcesses = Math.ceil(
                 tokenCount / rateLimitThreshold
               )
-              text = await this.parallelizeSummarization(
+              text = await summarizer.parallelizeSummarization(
                 context,
                 text,
+                maxTokensThreshold,
                 parallelProcesses
               )
             } catch (error) {
-              console.error('Error occurred calculating parallelization', error)
-              await saveForLater()
+              throw Error('Error occurred calculating parallelization')
+              // await saveForLater()
             }
           } else {
             await saveForLater()
           }
         } else {
           // Summarize the text immediately
-          text = await this.summarizeTextChunks(text, question)
+          const response = await summarizer.openAIComplete(
+            summarizer.summarizePrompt({ text, title: pagetitle })
+          )
+          text = response.choices[0].message.content
         }
 
         links.push(url) // TODO: use another tool to grab links, currently only pushing in page url
         // Save the summarized text in IndexedDB
+        console.log({ context, text }) // bad results
         await saveTextToIndexedDB('web_page_scraper_results', context, text)
       }
     } catch (apiError) {
@@ -386,22 +202,6 @@ class WebPageScraper extends BaseTool {
     }
 
     return { text, links }
-  }
-
-  /**
-   * Parallelizes the summarization process.
-   * @param {{ title: string; url: string; question: string; }} context
-   * @param {string} text
-   * @param {number} parallelProcesses
-   * @returns {Promise<string>} The summarized text.
-   */
-  async parallelizeSummarization(context, text, parallelProcesses) {
-    // Implement your own logic to parallelize the summarization process
-    // Spawn parallel processes or utilize concurrency mechanisms like Promise.all or worker threads
-    // Distribute the text into chunks and send them to the summarization API in parallel
-    // Aggregate the summarized chunks and return the complete summary
-    throw Error('Not implemented')
-    return 'summarized text'
   }
 }
 

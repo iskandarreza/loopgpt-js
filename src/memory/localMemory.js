@@ -25,11 +25,13 @@ class LocalMemory extends BaseMemory {
    * @param {string} doc - Document to add
    * @param {string|null} [key] - Key for the document (optional)
    */
-  add(doc, key = null) {
+  async add(doc, key = null) {
+    console.log({ doc })
     if (!key) {
       key = doc
     }
     const emb = this.embeddingProvider(key)
+    console.log({ emb })
     if (this.embs === null) {
       this.embs = [emb]
     } else {
