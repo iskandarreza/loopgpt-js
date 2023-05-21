@@ -12,7 +12,6 @@ class BaseMemory {
    * Retrieves k documents from memory based on a query
    * @param {string} query - Query for document retrieval
    * @param {number} k - Number of documents to retrieve
-   * @returns {Array<string>} - Array of retrieved documents
    */
   get(query, k) {
     throw new Error('Method get() must be implemented in a subclass.')

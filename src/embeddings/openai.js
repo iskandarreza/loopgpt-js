@@ -40,6 +40,8 @@ class OpenAIEmbeddingProvider extends BaseEmbeddingProvider {
     }
 
     const data = await response.json()
+
+    console.info('embeddings', JSON.stringify(data?.usage, null, 4))
     return data
   }
 

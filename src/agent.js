@@ -58,10 +58,10 @@ class Agent {
       new OpenAIModel(openaiApiKey, 'gpt-3.5-turbo') ||
       config.model ||
       undefined
+    this.temperature = config.temperature || 0.8
     this.embedding_provider =
       config.embedding_provider || new OpenAIEmbeddingProvider(openaiApiKey)
-    this.temperature = config.temperature || 0.8
-    this.memory = new LocalMemory(this.embedding_provider)
+    this.memory = this.memory || new LocalMemory(this.embedding_provider)
     /**
      * @type {{ role: string; content: any; }[]}
      */
@@ -155,15 +155,14 @@ class Agent {
    * displayed to the user, and "token_count" which is the number of tokens used by the messages in the
    * "full_prompt" array.
    */
-  getFullPrompt(user_input = '') {
+  async getFullPrompt(user_input = '') {
     const header = { role: 'system', content: this.headerPrompt() }
     const dtime = {
       role: 'system',
       content: `The current time and date is ${new Date().toLocaleString()}`,
     }
     const msgs = this._getNonUserMessages(10)
-    const relevant_memory = this.memory.get(msgs.toString(), 5)
-    console.log({ relevant_memory })
+    const relevant_memory = await this.memory.get(JSON.stringify(msgs), 5)
     const user_prompt = user_input
       ? [{ role: 'user', content: user_input }]
       : []
@@ -339,7 +338,7 @@ class Agent {
       this.staging_response = null
     }
 
-    const { full_prompt, token_count } = this.getFullPrompt(message)
+    const { full_prompt, token_count } = await this.getFullPrompt(message)
     const token_limit = this.model.getTokenLimit()
     // @ts-ignore
     const max_tokens = Math.min(1000, Math.max(token_limit - token_count, 0))
@@ -452,7 +451,7 @@ class Agent {
       } catch { }
     } else {
       // If we're here, we got major issues.
-      console.log({ resp })
+      console.log({ UNEXPECTED_RESPONSE: resp })
       let elseResp
       if (resp?.error) {
         if (resp.error.message === 'Critical error, threads should be ended') {
@@ -467,7 +466,6 @@ class Agent {
           }),
         }
       } else {
-        // elseResp = { role: 'system', content: JSON.stringify(resp) }
         elseResp = { role: 'system', content: 'Unhandled error' }
       }
       this.history.push(elseResp)
@@ -489,8 +487,6 @@ class Agent {
         this.history.splice(1, 1) // Remove second element
       }
     }
-
-    console.log({ parsedResp })
 
     return await parsedResp
   }
@@ -807,7 +803,6 @@ class Agent {
       )
       // @ts-ignore
       const resp = await new tool(this).run(kwargs)
-      console.log({ tool_resp: resp })
       this.history.push({
         role: 'system',
         content: `Command "${toolId}" with args ${JSON.stringify(

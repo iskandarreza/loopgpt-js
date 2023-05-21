@@ -9,7 +9,7 @@ class WebSearch extends BaseTool {
    */
   constructor(agent) {
     super(WebSearch.identifier)
-    this.memory = agent.memory
+    this.agent = agent
   }
 
   /**
@@ -39,7 +39,7 @@ class WebSearch extends BaseTool {
       // @ts-ignore
       this.googleApiKey
       // @ts-ignore
-      }&cx=${this.googleCxId}&q=${encodeURIComponent(query)}`
+    }&cx=${this.googleCxId}&q=${encodeURIComponent(query)}`
     const response = await fetch(apiUrl)
     const data = await response.json()
 
@@ -71,16 +71,14 @@ class WebSearch extends BaseTool {
    * @param {{title: string; link: string; question: string;}[]} results - The search results.
    */
   async _addToMemory(query, results) {
-    console.log({ results })
-    if (this.memory) {
+    if (this.agent.memory) {
       let entry = `Search result for ${query}:\n`
       for (const { title, link } of results) {
         entry += `\t${title}: ${link}\n`
-        console.log({ memoryEntry: entry, memory: this.memory })
       }
       entry += '\n'
 
-      await this.memory.add(entry)
+      await this.agent.memory.add(entry)
     }
   }
 

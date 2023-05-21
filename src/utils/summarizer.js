@@ -18,11 +18,8 @@ class Summarizer {
    * @returns {Promise<string>} The summarized text.
    */
   async parallelizeSummarization(context, text, maxTokens, parallelProcesses) {
-    console.log({ context, text, maxTokens, parallelProcesses })
     const chunks = Summarizer.splitTextIntoChunks(text, maxTokens)
     const totalChunks = chunks.length
-
-    console.log({ chunks })
 
     /**
      * @type {any[]}
@@ -68,7 +65,6 @@ class Summarizer {
       await Promise.all(chunkPromises)
     }
 
-    console.log('parallelizeSummarization', { results })
     // Combine the individual summaries into a single summarized text
     const summarizedText = results
       .sort((a, b) => a.index - b.index)
@@ -87,10 +83,11 @@ class Summarizer {
    * @param {{text: string; title: string;}} textData
    * @param {{currentChunk: number; totalChunks: number;}} [chunkData]   */
   summarizePrompt(textData, chunkData) {
-    const contentHeader = `Summarize the following${!!chunkData
-      ? `, ${chunkData.currentChunk} of ${chunkData.totalChunks})`
-      : ''
-      }, from a webpage titled: ${textData.title}:`
+    const contentHeader = `Summarize the following${
+      !!chunkData
+        ? `, ${chunkData.currentChunk} of ${chunkData.totalChunks})`
+        : ''
+    }, from a webpage titled: ${textData.title}:`
 
     return [
       {
@@ -141,7 +138,11 @@ class Summarizer {
               { currentChunk: 2, totalChunks: 2 }
             )
 
-            console.log('handleAPICompletionError', { error: response.error, firstHalfPrompt, secondHalfPrompt })
+            console.error('handleAPICompletionError', {
+              error: response.error,
+              firstHalfPrompt,
+              secondHalfPrompt,
+            })
             // @ts-ignore
             const firstHalfResponse = await handleAPICompletion(firstHalfPrompt)
             // @ts-ignore
@@ -161,7 +162,7 @@ class Summarizer {
             await sleep(delayBetweenCalls)
           }
         } else {
-          return response
+          return response.choices[0].message.content
         }
       }
     }
@@ -255,10 +256,9 @@ class Summarizer {
       const results = await response.chat(prompt, {
         max_tokens: 3000 * 0.8, // add margin
       })
-      console.log(JSON.stringify(results?.usage, null, 4))
       return results
     } catch (error) {
-      console.error('Error:', error)
+      console.error(error)
       throw new Error('Failed to make the API call.')
     }
   }
@@ -270,7 +270,6 @@ class Summarizer {
    */
   // @ts-ignore
   async retrySummarization(context, text, maxTokens) {
-    console.log('retrySummarization', { context, text, maxTokens })
     const halfLength = Math.floor(text.length / 2)
     const firstHalf = text.slice(0, halfLength)
     const secondHalf = text.slice(halfLength)

@@ -15,7 +15,7 @@ class LocalMemory extends BaseMemory {
      */
     this.docs = []
     this.embs = null
-    this.embeddingProvider = embeddingProvider
+    this.embedding_provider = embeddingProvider
   }
 
   /**
@@ -26,18 +26,24 @@ class LocalMemory extends BaseMemory {
    * @param {string|null} [key] - Key for the document (optional)
    */
   async add(doc, key = null) {
-    console.log({ doc })
     if (!key) {
       key = doc
     }
-    const emb = this.embeddingProvider(key)
-    console.log({ emb })
-    if (this.embs === null) {
-      this.embs = [emb]
+    // @ts-ignore
+    const emb = await this.embedding_provider.get(key)
+
+    if (emb.data[0].embedding) {
+      const embedding = emb.data[0].embedding
+      if (this.embs === null) {
+        this.embs = [embedding]
+      } else {
+        this.embs.push(embedding)
+      }
+
+      this.docs.push(doc)
     } else {
-      this.embs.push(emb)
+      throw Error('Error getting embedding from provider')
     }
-    this.docs.push(doc)
   }
 
   /**
@@ -47,19 +53,33 @@ class LocalMemory extends BaseMemory {
    * Returns the top k documents based on the similarity scores
    * @param {string} query - Query for document retrieval
    * @param {number} k - Number of documents to retrieve
-   * @returns {Array<string>} - Array of retrieved documents
    */
-  get(query, k) {
-    if (this.embs === null) {
+  async get(query, k) {
+    if (this.embs === null || !Array.isArray(this.embs)) {
       return []
     }
-    const emb = this.embeddingProvider(query)
-    const scores = this.embs.map((storedEmb) => dotProduct(storedEmb, emb))
-    const sortedIdxs = scores
-      .map((score, idx) => [score, idx])
-      .sort((a, b) => b[0] - a[0])
-    const topKIdxs = sortedIdxs.slice(0, k).map((item) => item[1])
-    return topKIdxs.map((idx) => this.docs[idx])
+
+    // @ts-ignore
+    const emb = await this.embedding_provider.get(query)
+
+    if (emb.data[0].embedding && Array.isArray(emb.data[0].embedding)) {
+      const scores = this.embs.map((storedEmb) => {
+        if (Array.isArray(storedEmb) && storedEmb.length === 1536) {
+          return dotProduct(storedEmb, emb.data[0].embedding)
+        } else {
+          return 0 // or any default value if the storedEmb is invalid
+        }
+      })
+
+      const sortedIdxs = scores
+        .map((score, idx) => [score, idx])
+        .sort((a, b) => b[0] - a[0])
+      const topKIdxs = sortedIdxs.slice(0, k).map((item) => item[1])
+      return topKIdxs.map((idx) => this.docs[idx])
+    } else {
+      console.error(emb)
+      throw Error('Error getting embedding from provider')
+    }
   }
 
   /**

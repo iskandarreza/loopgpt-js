@@ -174,7 +174,6 @@ class WebPageScraper extends BaseTool {
               )
             } catch (error) {
               throw Error('Error occurred calculating parallelization')
-              // await saveForLater()
             }
           } else {
             await saveForLater()
@@ -189,8 +188,8 @@ class WebPageScraper extends BaseTool {
 
         links.push(url) // TODO: use another tool to grab links, currently only pushing in page url
         // Save the summarized text in IndexedDB
-        console.log({ context, text }) // bad results
         await saveTextToIndexedDB('web_page_scraper_results', context, text)
+        // TODO: if feasible, create embeddings for the results and save to memory
       }
     } catch (apiError) {
       console.error(
