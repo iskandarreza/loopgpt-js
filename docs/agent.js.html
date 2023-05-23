@@ -1,4 +1,32 @@
-// Credits to Fariz Rahman for https://github.com/farizrahman4u/loopgpt
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: agent.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: agent.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// Credits to Fariz Rahman for https://github.com/farizrahman4u/loopgpt
 const { OpenAIModel } = require('./openAIModel.js')
 const {
   AgentStates,
@@ -64,7 +92,7 @@ class Agent {
       config.embedding_provider || new OpenAIEmbeddingProvider(openaiApiKey)
     this.memory = this.memory || new LocalMemory(this.embedding_provider)
     /**
-     * @type {Array<{ role: string, content: any }>}
+     * @type {Array&lt;{ role: string, content: any }>}
      */
     this.history = []
     this.init_prompt = config.init_prompt || INIT_PROMPT || undefined
@@ -140,8 +168,8 @@ class Agent {
   _getNonUserMessages(n) {
     const msgs = this.history.filter((msg) => {
       return (
-        msg.role !== 'user' &&
-        !(msg.role === 'system' && msg.content.includes('do_nothing'))
+        msg.role !== 'user' &amp;&amp;
+        !(msg.role === 'system' &amp;&amp; msg.content.includes('do_nothing'))
       )
     })
     return msgs.slice(-n - 1, -1)
@@ -152,7 +180,7 @@ class Agent {
    * input, and relevant memory.
    * @param {string} [user_input] - The user's input, which is an optional parameter. If provided, it will be
    * added to the prompt as a user message.
-   * @returns {Promise<{full_prompt: Array<{role: string, content: string}>, token_count: number}>}
+   * @returns {Promise&lt;{full_prompt: Array&lt;{role: string, content: string}>, token_count: number}>}
    * - An object with two properties: "full_prompt" which is an array of messages to be
    * displayed to the user, and "token_count" which is the number of tokens used by the messages in the
    * "full_prompt" array.
@@ -199,7 +227,7 @@ class Agent {
       const msgs = await _msgs()
       ntokens = 0
       ntokens += await this.model.countPromptTokens(msgs)
-      if (ntokens < maxtokens) {
+      if (ntokens &lt; maxtokens) {
         break
       } else {
         if (history.length > 1) {
@@ -356,7 +384,7 @@ class Agent {
     // let remindAgent = false
     // let modifiedPrompt = [...full_prompt]
     // if (
-    //   typeof this.tool_response === 'string' &&
+    //   typeof this.tool_response === 'string' &amp;&amp;
     //   this.tool_response.includes(
     //     'is not available. Please choose a different command.'
     //   )
@@ -413,7 +441,7 @@ class Agent {
 
     if (resp?.choices) {
       reply = resp.choices[0].message.content
-      if (resp.usage && resp.usage.total_tokens) {
+      if (resp.usage &amp;&amp; resp.usage.total_tokens) {
         let total_tokens = resp.usage.total_tokens
         console.info({
           token_count,
@@ -490,10 +518,10 @@ class Agent {
         }
       }
 
-      if (plan && Array.isArray(plan)) {
+      if (plan &amp;&amp; Array.isArray(plan)) {
         if (
           plan.length === 0 ||
-          (plan.length === 1 && plan[0].replace('-', '').length === 0)
+          (plan.length === 1 &amp;&amp; plan[0].replace('-', '').length === 0)
         ) {
           this.staging_tool = { name: 'task_complete', args: {} }
           this.staging_response = reply
@@ -544,10 +572,10 @@ class Agent {
           role: 'system',
           content: JSON.stringify({
             error: {
-              message: message && message,
-              type: type && type,
-              code: code && code,
-              param: param && param,
+              message: message &amp;&amp; message,
+              type: type &amp;&amp; type,
+              code: code &amp;&amp; code,
+              param: param &amp;&amp; param,
             },
           }),
         }
@@ -559,7 +587,7 @@ class Agent {
         errorResp = { role: 'system', content: 'Unhandled error' }
       }
 
-      !!errorResp && console.error(errorResp)
+      !!errorResp &amp;&amp; console.error(errorResp)
 
       return errorResp || resp
     }
@@ -613,7 +641,7 @@ class Agent {
   progressPrompt() {
     let prompt = []
     prompt.push('PROGRESS SO FAR:')
-    for (let i = 0; i < this.progress.length; i++) {
+    for (let i = 0; i &lt; this.progress.length; i++) {
       prompt.push(`${i + 1}. DONE - ${this.progress[i]}`)
     }
     return prompt.join('\n') + '\n'
@@ -637,7 +665,7 @@ class Agent {
   goalsPrompt() {
     let prompt = []
     prompt.push('GOALS:')
-    for (let i = 0; i < this.goals.length; i++) {
+    for (let i = 0; i &lt; this.goals.length; i++) {
       prompt.push(`${i + 1}. ${this.goals[i]}`)
     }
     return prompt.join('\n') + '\n'
@@ -651,7 +679,7 @@ class Agent {
   constraintsPrompt() {
     let prompt = []
     prompt.push('CONSTRAINTS:')
-    for (let i = 0; i < this.constraints.length; i++) {
+    for (let i = 0; i &lt; this.constraints.length; i++) {
       prompt.push(`${i + 1}. ${this.constraints[i]}`)
     }
     return prompt.join('\n') + '\n'
@@ -664,7 +692,7 @@ class Agent {
   toolsPrompt() {
     const prompt = ['Commands:']
 
-    for (let i = 0; i < this.#tools.length; i++) {
+    for (let i = 0; i &lt; this.#tools.length; i++) {
       // @ts-ignore
       const tool = new this.#tools[i]()
       tool.agent = this
@@ -923,3 +951,26 @@ function assert(condition, message) {
 module.exports = {
   Agent,
 }
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Agent.html">Agent</a></li><li><a href="BaseEmbeddingProvider.html">BaseEmbeddingProvider</a></li><li><a href="global.html#BaseTool">BaseTool</a></li><li><a href="KeyConfig.html">KeyConfig</a></li><li><a href="LocalMemory.html">LocalMemory</a></li><li><a href="OpenAIEmbeddingProvider.html">OpenAIEmbeddingProvider</a></li><li><a href="OpenAIModel.html">OpenAIModel</a></li><li><a href="Summarizer.html">Summarizer</a></li><li><a href="WebPageScraper.html">WebPageScraper</a></li><li><a href="WebSearch.html">WebSearch</a></li></ul><h3>Global</h3><ul><li><a href="global.html#assert">assert</a></li><li><a href="global.html#countTokens">countTokens</a></li><li><a href="global.html#dotProduct">dotProduct</a></li><li><a href="global.html#generateUniqueKey">generateUniqueKey</a></li><li><a href="global.html#isBalanced">isBalanced</a></li><li><a href="global.html#openDatabase">openDatabase</a></li><li><a href="global.html#optimizeContext">optimizeContext</a></li><li><a href="global.html#retrieveKeysAndContext">retrieveKeysAndContext</a></li><li><a href="global.html#retrieveText">retrieveText</a></li><li><a href="global.html#saveTextToIndexedDB">saveTextToIndexedDB</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Tue May 23 2023 10:30:31 GMT-0700 (Pacific Daylight Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

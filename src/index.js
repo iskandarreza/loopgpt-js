@@ -1,13 +1,11 @@
-const { Agent } = require("./agent");
-const { AgentStates } = require("./constants.js");
-const { LocalMemory } = require("./localMemory");
-const { OpenAIEmbeddingProvider } = require("./openAIEmbeddingProvider");
-const { OpenAIModel } = require("./openAIModel");
+const { Agent } = require('./agent.js')
+const { KeyConfig } = require('./constants.js')
+const { OpenAIModel } = require('./openAIModel.js')
+const { Tools } = require('../src/tools.js')
 
 module.exports = {
   Agent,
-  AgentStates,
-  LocalMemory,
-  OpenAIEmbeddingProvider,
-  OpenAIModel
-};
+  OpenAIModel,
+  Tools,
+  KeyConfig,
+}

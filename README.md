@@ -1,38 +1,79 @@
-A Javascript implementation of the `loopgpt` Python module by Fariz Rahman - https://github.com/farizrahman4u/loopgpt
+## LoopGPT-JS
 
-Add to your node project:
+https://github.com/iskandarreza/loopgpt-js
+A lightweight Javascript implementation of the [`loopgpt`](https://github.com/farizrahman4u/loopgpt) Python module by Fariz Rahman.
+For use in browser environments, particularly off the main thread within web worker processes.
+
+### How it works
+
+Here's a basic rundown of how autonomous self-prompting AI agents like LoopGPT or AutoGPT work:
+
+![How AutoGPT works](./docs/images/how-self-prompting-works.jpg)
+
+- User sets the initial config, which describes the agent and it's goals
+- System generates an initial prompt to send to the chat completion API
+- Chat completion API provides a response in a preset format that the system can process. Response may include the next command the agent decides to take
+- System processes the response, runs any commands the agent includes in the last response, then generates the next prompt to send to the chat completion API
+- Cycle repeats until exit conditions are met
+
+### View the docs
+
+[JSDoc](https://iskandarreza.github.io/loopgpt-js/)
+
+#### Add to your node project:
+
 ```bash
 npm install loopgpt-js
 ```
 
-Usage example:
+#### Usage example:
+
 ```js
-const loopgpt = require("loopgpt-js");
-const { Agent, AgentStates, LocalMemory, OpenAIEmbeddingProvider, OpenAIModel } = loopgpt;
+const loopgpt = require('loopgpt-js')
+const { Agent } = loopgpt
 
-const init = async () => {
-  // example startup
-  const apiKey = 'YOUR-OPENAI-API-KEY'
-  const apiUrl = 'https://api.openai.com/v1/chat/completions'
-
-  const agent = new Agent({
-    model: new OpenAIModel('gpt-3.5-turbo', apiKey, apiUrl),
-    embedding_provider: new OpenAIEmbeddingProvider(),
-    temperature: 0.8,
-    memory: new LocalMemory(),
-    history: [],
-    goals: [],
-    progress: [],
-    plan: [],
-    constraints: [],
-    state: AgentStates.START,
+async function initLoop() {
+  // you could save the api key(s) on a server and fetch it when needed
+  const apiKeyResponse = await fetch('/api/openai', {
+    method: 'POST'
   })
 
-  console.log({agent})
+  const { apiKey } = await apiKeyResponse.json()
 
-  const response = await agent.chat({ message: "Hello! Please state your capabilites and provide the output in markdown." })
-  console.log(response)
+  // or you could pass it in directly
+  const keys = {
+    openai: apiKey,
+    google: {
+      googleApiKey: 'GOOGLE_API_KEY',
+      googleCxId: 'CUSTOM_SEARCH_ENGINE_ID'
+    }
+  }
+
+  // Create a new instance of the Agent class
+  const agent = new Agent({
+    keys: keys,
+    goals: [
+      'Run the web_search command for "California wildflowers" and then produce an overview of your findings with descriptions of each flower and their native area,'
+    ]
+  })
+
+  const chat = async () => {
+    let response
+    response = await agent.chat({ message: null })
+
+    while (response?.command?.name !== 'task_complete') {
+      response = await agent.chat({ run_tool: true })
+      console.log(agent)
+      console.log(response)
+    }
+  }
+
+  chat()
 }
 
-init()
+initLoop()
 ```
+
+#### See Also:
+
+https://github.com/iskandarreza/ai-worker-js -- Implementation of loopgpt-js as a dynamically created web worker in a Next/React app
