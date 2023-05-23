@@ -17,7 +17,7 @@ Here's a basic rundown of how autonomous self-prompting AI agents like LoopGPT o
 
 ### View the docs
 
-[JSDoc](./docs/index.html)
+[JSDoc](https://iskandarreza.github.io/loopgpt-js/)
 
 #### Add to your node project:
 
