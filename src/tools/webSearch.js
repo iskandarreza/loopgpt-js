@@ -85,25 +85,50 @@ class WebSearch extends BaseTool {
    */
   async _addToMemory(memEntry) {
     if (this.agent.memory) {
-      let entry = `Search result for ${memEntry.query}:\n`
       for (const { title, link, indexKey } of memEntry.entries) {
+        let entry = `Search result for ${memEntry.query}:\n`
         entry += `\t${title}: ${link} -- id:${indexKey}\n`
+        entry += '\n'
+        await this.agent.memory.add(entry)
       }
-      entry += '\n'
-      await this.agent.memory.add(entry)
     }
   }
 
   /**
    * Executes the search.
-   * @param {object} args - The args object.
-   * @param {string} args.query - The search query.
-   * @param {number} [args.numResults] - The number of results to retrieve.
+   * @param {Array<{query: string; numResults: number|undefined}>|{query: string; numResults: number|undefined}} args - The args object.
    * @returns {Promise<any>} The search results. The search results as a string.
    */
-  async run({ query, numResults = 8 }) {
-    const results = await this.googleSearch(query, numResults)
-    return { results }
+  async run(args) {
+    console.log({ args })
+
+    if (!args) {
+      return 'Error: args is missing'
+    }
+
+    if (Array.isArray(args)) {
+      if (args.length === 0) {
+        return 'Error: args array is empty'
+      }
+
+      const { query, numResults = 8 } = args[0]
+
+      if (!query) {
+        return 'Error: query argument is missing'
+      }
+
+      const results = await this.googleSearch(query, numResults)
+      return { results }
+    } else {
+      const { query, numResults = 8 } = args
+
+      if (!query) {
+        return 'Error: query argument is missing'
+      }
+
+      const results = await this.googleSearch(query, numResults)
+      return { results }
+    }
   }
 }
 

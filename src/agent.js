@@ -14,6 +14,7 @@ const { OpenAIEmbeddingProvider } = require('./embeddings/openai.js')
 const { Tools } = require('./tools.js')
 const BaseTool = require('./tools/baseToolClass.js')
 const optimizeContext = require('./utils/optimizeContext.js')
+const isBalanced = require('./utils/isBalanced.js')
 
 /**
  * @typedef {object} keyConfig
@@ -151,7 +152,8 @@ class Agent {
    * input, and relevant memory.
    * @param {string} [user_input] - The user's input, which is an optional parameter. If provided, it will be
    * added to the prompt as a user message.
-   * @returns An object with two properties: "full_prompt" which is an array of messages to be
+   * @returns {Promise<{full_prompt: Array<{role: string; content: string;}>; token_count: number;}>} 
+   * - An object with two properties: "full_prompt" which is an array of messages to be
    * displayed to the user, and "token_count" which is the number of tokens used by the messages in the
    * "full_prompt" array.
    */
@@ -164,10 +166,11 @@ class Agent {
       content: `The current time and date is ${new Date().toLocaleString()}`,
     }
     const msgs = this._getNonUserMessages(10)
-    const relevant_memory = await this.memory.get(JSON.stringify(msgs), 5)
     const user_prompt = user_input
       ? [{ role: 'user', content: user_input }]
       : []
+
+    let relevant_memory = await this.memory.get(JSON.stringify(msgs), 5)
     let history = this.getCompressedHistory()
 
     const _msgs = async () => {
@@ -175,7 +178,8 @@ class Agent {
       let optimizedHistory
       msgs.push(...history.slice(0, -1))
       if (relevant_memory.length) {
-        const memstr = relevant_memory.join('\n')
+        const uniqueMemory = [...new Set(relevant_memory)] // Remove duplicates
+        const memstr = uniqueMemory.join('\n')
         const context = {
           role: 'system',
           content: `You have the following items in your memory as a result of previously executed commands:\n${memstr}\n`,
@@ -187,12 +191,14 @@ class Agent {
       optimizedHistory = await optimizeContext([...msgs], maxtokens)
       optimizedHistory.push(...user_prompt)
 
+      console.log({ optimizedHistory })
       return optimizedHistory
     }
 
     let ntokens = 0
     while (true) {
       const msgs = await _msgs()
+      ntokens = 0
       ntokens += await this.model.countPromptTokens(msgs)
       if (ntokens < maxtokens) {
         break
@@ -255,7 +261,7 @@ class Agent {
         entry.content = JSON.stringify(respd, null, 2)
         // @ts-ignore
         hist[i] = entry
-      } catch (e) {}
+      } catch (e) { }
     })
     /**
      * @type {number[]}
@@ -441,8 +447,19 @@ class Agent {
       let command
 
       try {
-        reply = JSON.parse(reply)
-        console.log('JSON.parse()', { reply })
+        if (isBalanced(reply)) {
+          reply = JSON.parse(reply)
+          console.log('JSON.parse()', { reply })
+        } else {
+          console.info('Reply JSON not balanced.')
+          try {
+            console.info('Attempting to balance curly braces')
+            reply.substring(0, reply.length - 1)
+            reply = JSON.parse(reply)
+          } catch (error) {
+            console.error('Unable to balance JSON reply', { reply })
+          }
+        }
       } catch (error) {
         const errMsg = 'Unable to JSON.parse() reply'
         console.error(errMsg, error)
@@ -650,14 +667,15 @@ class Agent {
    * @returns {string} The tool prompt.
    */
   toolsPrompt() {
-    const prompt = []
-    prompt.push('Commands:')
+    const prompt = ['Commands:']
+
     for (let i = 0; i < this.#tools.length; i++) {
       // @ts-ignore
       const tool = new this.#tools[i]()
       tool.agent = this
       prompt.push(`${i + 1}. ${tool.prompt()}`)
     }
+
     const taskCompleteCommand = {
       name: 'task_complete',
       description:
@@ -665,18 +683,24 @@ class Agent {
       args: {},
       responseFormat: { success: 'true' },
     }
+
     const doNothingCommand = {
       name: 'do_nothing',
       description: 'Do nothing.',
       args: {},
       responseFormat: { response: 'Nothing Done.' },
     }
+
     prompt.push(
-      `${this.#tools.length + 2}. ${JSON.stringify(taskCompleteCommand)}`
+      `${this.#tools.length + 1}. ${taskCompleteCommand.name}: ${taskCompleteCommand.description
+      }`
     )
+
     prompt.push(
-      `${this.#tools.length + 3}. ${JSON.stringify(doNothingCommand)}`
+      `${this.#tools.length + 2}. ${doNothingCommand.name}: ${doNothingCommand.description
+      }`
     )
+
     return prompt.join('\n') + '\n'
   }
 

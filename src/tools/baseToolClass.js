@@ -52,7 +52,7 @@ class BaseTool {
       name: this.id,
       description: this.desc,
       args: this.args,
-      response_format: this.resp,
+      responseFormat: this.resp,
     })
   }
 

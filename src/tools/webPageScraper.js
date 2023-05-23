@@ -107,18 +107,51 @@ class WebPageScraper extends BaseTool {
 
   /**
    * Executes the web page scraping and summarization.
-   * @param {{url: string; question: string;}} args
+   * @param {Array<{url: string; question: string;}>|{url: string; question: string;}} args
    * @returns {Promise<{ text: string | null, links: (string|null)[] } | string>} The scraped data and summarized text.
    */
-  async run({ url, question }) {
-    if (!url || !question) {
-      if (!url && !question) {
-        return 'Error: both url and question arguments are missing'
-      } else if (!url) {
-        return 'Error: url argument is missing'
-      } else {
-        return 'Error: question argument is missing'
+  async run(args) {
+    console.log({ args })
+
+    if (!args) {
+      return 'Error: args is missing'
+    }
+
+    let _url
+    let _question
+    if (Array.isArray(args)) {
+      if (args.length === 0) {
+        return 'Error: args array is empty'
       }
+
+      const { url, question } = args[0]
+
+      if (!url || !question) {
+        if (!url && !question) {
+          return 'Error: both url and question arguments are missing'
+        } else if (!url) {
+          return 'Error: url argument is missing'
+        } else {
+          return 'Error: question argument is missing'
+        }
+      }
+      _url = url
+      _question = question
+    } else {
+      const { url, question } = args
+
+      if (!url || !question) {
+        if (!url && !question) {
+          return 'Error: both url and question arguments are missing'
+        } else if (!url) {
+          return 'Error: url argument is missing'
+        } else {
+          return 'Error: question argument is missing'
+        }
+      }
+
+      _url = url
+      _question = question
     }
 
     let title = ''
@@ -126,8 +159,8 @@ class WebPageScraper extends BaseTool {
 
     let context = {
       title,
-      url,
-      question,
+      url: _url,
+      question: _question,
     }
     /**
      * @type {(string | null)[]}
@@ -145,8 +178,8 @@ class WebPageScraper extends BaseTool {
     }
 
     try {
-      const pagetitle = await this.scrapeWebPageAPI(url, 'title')
-      const results = await this.scrapeWebPageAPI(url, 'body')
+      const pagetitle = await this.scrapeWebPageAPI(_url, 'title')
+      const results = await this.scrapeWebPageAPI(_url, 'body')
 
       if (results) {
         context.title = JSON.stringify(pagetitle)
@@ -191,14 +224,15 @@ class WebPageScraper extends BaseTool {
           text = response.choices[0].message.content
         }
 
-        links.push(url) // TODO: use another tool to grab links, currently only pushing in page url
+        // TODO: use another tool to grab links, currently only pushing in page url
+        links.push(_url)
         // Save the summarized text in IndexedDB
         const indexKey = await saveTextToIndexedDB(
           'web_page_scraper_results',
           context,
           text
         )
-        await this._addToMemory(pagetitle, { text, url, indexKey })
+        await this._addToMemory(pagetitle, { text, url: _url, indexKey })
       }
     } catch (apiError) {
       console.error(
@@ -220,6 +254,7 @@ class WebPageScraper extends BaseTool {
     if (this.agent.memory) {
       let entry = `Summary for ${pagetitle}:\n`
       entry += `\t${results.text}: {${results.url}} -- ${results.indexKey}\n`
+      entry += '\n'
       await this.agent.memory.add(entry)
     }
   }
@@ -258,9 +293,9 @@ async function retrieveText(storeName, key) {
       const error = event.target ? event.target.error : null
       reject(
         error ||
-          new Error(
-            'An error occurred while retrieving the text from the database.'
-          )
+        new Error(
+          'An error occurred while retrieving the text from the database.'
+        )
       )
     }
   })

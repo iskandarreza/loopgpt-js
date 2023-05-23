@@ -47,12 +47,18 @@ class LocalMemory extends BaseMemory {
   }
 
   /**
-   * Retrieves k documents from memory based on the similarity to the query
-   * Retrieves the embedding using the embeddingProvider
-   * Computes the similarity scores between the query embedding and stored embeddings
-   * Returns the top k documents based on the similarity scores
-   * @param {string} query - Query for document retrieval
-   * @param {number} k - Number of documents to retrieve
+   * This function takes a query and a value k, retrieves embeddings for the query, calculates scores
+   * for stored embeddings, and returns the top k documents based on the scores.
+   * @param {string} query - The query parameter is the input query for which the function will retrieve the top
+   * k most similar documents.
+   * @param {number} k - `k` is a positive integer representing the number of top results to return. The
+   * function will return the `k` documents with the highest scores based on their dot product with the
+   * provided query embedding.
+   * @returns {Promise<number[]|[]>} The function `get` returns an array of documents that are most similar to the input
+   * query, based on their embeddings. The number of documents returned is determined by the value of
+   * the `k` parameter. If there are no embeddings stored or they are not in the expected format, an
+   * empty array is returned. If there is an error getting the embedding from the provider, an error is
+   * thrown.
    */
   async get(query, k) {
     if (this.embs === null || !Array.isArray(this.embs)) {
@@ -74,7 +80,19 @@ class LocalMemory extends BaseMemory {
       const sortedIdxs = scores
         .map((score, idx) => [score, idx])
         .sort((a, b) => b[0] - a[0])
-      const topKIdxs = sortedIdxs.slice(0, k).map((item) => item[1])
+
+      const uniqueIdxs = new Set()
+      const topKIdxs = []
+      for (const [score, idx] of sortedIdxs) {
+        if (uniqueIdxs.size >= k) {
+          break
+        }
+        if (!uniqueIdxs.has(idx)) {
+          uniqueIdxs.add(idx)
+          topKIdxs.push(idx)
+        }
+      }
+
       return topKIdxs.map((idx) => this.docs[idx])
     } else {
       console.error(emb)

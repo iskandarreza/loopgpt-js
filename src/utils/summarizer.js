@@ -71,6 +71,8 @@ class Summarizer {
       .map((result) => result.summary)
       .join(' ')
 
+    console.debug({ summarizedText })
+
     // Check if the combined summary still exceeds the token limit
     if ((await countTokens(summarizedText)) > maxTokens) {
       return await this.retrySummarization(context, summarizedText, maxTokens)
@@ -83,11 +85,10 @@ class Summarizer {
    * @param {{text: string; title: string;}} textData
    * @param {{currentChunk: number; totalChunks: number;}} [chunkData]   */
   summarizePrompt(textData, chunkData) {
-    const contentHeader = `Summarize the following${
-      !!chunkData
+    const contentHeader = `Summarize the following${!!chunkData
         ? `, ${chunkData.currentChunk} of ${chunkData.totalChunks})`
         : ''
-    }, from a webpage titled: ${textData.title}:`
+      }, from a webpage titled: ${textData.title}:`
 
     return [
       {
