@@ -1,5 +1,6 @@
 ## LoopGPT-JS
 
+https://github.com/iskandarreza/loopgpt-js
 A lightweight Javascript implementation of the [`loopgpt`](https://github.com/farizrahman4u/loopgpt) Python module by Fariz Rahman.
 For use in browser environments, particularly off the main thread within web worker processes.
 
