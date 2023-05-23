@@ -54,7 +54,7 @@ class LocalMemory extends BaseMemory {
    * @param {number} k - `k` is a positive integer representing the number of top results to return. The
    * function will return the `k` documents with the highest scores based on their dot product with the
    * provided query embedding.
-   * @returns {Promise<number[]|[]>} The function `get` returns an array of documents that are most similar to the input
+   * @returns {Promise<string[]|[]>} The function `get` returns an array of documents that are most similar to the input
    * query, based on their embeddings. The number of documents returned is determined by the value of
    * the `k` parameter. If there are no embeddings stored or they are not in the expected format, an
    * empty array is returned. If there is an error getting the embedding from the provider, an error is
@@ -93,7 +93,9 @@ class LocalMemory extends BaseMemory {
         }
       }
 
-      return topKIdxs.map((idx) => this.docs[idx])
+      const results = topKIdxs.map((idx) => this.docs[idx])
+      console.debug('memory.get()', { results })
+      return results
     } else {
       console.error(emb)
       throw Error('Error getting embedding from provider')

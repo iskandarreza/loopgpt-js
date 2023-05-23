@@ -454,10 +454,12 @@ class Agent {
           console.info('Reply JSON not balanced.')
           try {
             console.info('Attempting to balance curly braces')
-            reply.substring(0, reply.length - 1)
-            reply = JSON.parse(reply)
+            if (typeof reply === 'string') {
+              let trimmed = reply.substring(0, reply.length - 1)
+              reply = JSON.parse(trimmed)
+            }
           } catch (error) {
-            console.error('Unable to balance JSON reply', { reply })
+            console.error('Unable to balance JSON reply', { error, reply })
           }
         }
       } catch (error) {

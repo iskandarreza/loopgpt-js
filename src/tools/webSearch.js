@@ -39,7 +39,7 @@ class WebSearch extends BaseTool {
       // @ts-ignore
       this.googleApiKey
       // @ts-ignore
-    }&cx=${this.googleCxId}&q=${encodeURIComponent(query)}`
+      }&cx=${this.googleCxId}&q=${encodeURIComponent(query)}`
     const response = await fetch(apiUrl)
     const data = await response.json()
     let resultsSummary
@@ -89,7 +89,11 @@ class WebSearch extends BaseTool {
         let entry = `Search result for ${memEntry.query}:\n`
         entry += `\t${title}: ${link} -- id:${indexKey}\n`
         entry += '\n'
-        await this.agent.memory.add(entry)
+
+        const memoryEntries = this.agent.memory.docs.filter((/** @type {string} */ doc) => doc = entry)
+        if (memoryEntries.length === 0) {
+          await this.agent.memory.add(entry)
+        }
       }
     }
   }

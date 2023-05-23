@@ -255,7 +255,12 @@ class WebPageScraper extends BaseTool {
       let entry = `Summary for ${pagetitle}:\n`
       entry += `\t${results.text}: {${results.url}} -- ${results.indexKey}\n`
       entry += '\n'
-      await this.agent.memory.add(entry)
+
+      const memoryEntries = this.agent.memory.docs.filter((/** @type {string} */ doc) => doc = entry)
+      if (memoryEntries.length === 0) {
+        await this.agent.memory.add(entry)
+      }
+      // }
     }
   }
 }
