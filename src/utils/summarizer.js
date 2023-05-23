@@ -85,10 +85,11 @@ class Summarizer {
    * @param {{text: string; title: string;}} textData
    * @param {{currentChunk: number; totalChunks: number;}} [chunkData]   */
   summarizePrompt(textData, chunkData) {
-    const contentHeader = `Summarize the following${!!chunkData
+    const contentHeader = `Summarize the following${
+      !!chunkData
         ? `, ${chunkData.currentChunk} of ${chunkData.totalChunks})`
         : ''
-      }, from a webpage titled: ${textData.title}:`
+    }, from a webpage titled: ${textData.title}:`
 
     return [
       {

@@ -152,7 +152,7 @@ class Agent {
    * input, and relevant memory.
    * @param {string} [user_input] - The user's input, which is an optional parameter. If provided, it will be
    * added to the prompt as a user message.
-   * @returns {Promise<{full_prompt: Array<{role: string; content: string;}>; token_count: number;}>} 
+   * @returns {Promise<{full_prompt: Array<{role: string; content: string;}>; token_count: number;}>}
    * - An object with two properties: "full_prompt" which is an array of messages to be
    * displayed to the user, and "token_count" which is the number of tokens used by the messages in the
    * "full_prompt" array.
@@ -261,7 +261,7 @@ class Agent {
         entry.content = JSON.stringify(respd, null, 2)
         // @ts-ignore
         hist[i] = entry
-      } catch (e) { }
+      } catch (e) {}
     })
     /**
      * @type {number[]}
@@ -283,7 +283,7 @@ class Agent {
    * This function returns a message with a prompt based on the current state of an agent.
    * @param {string|null} message - The message parameter is a string that represents the user's input or response to
   the agent's prompt. It is an optional parameter that can be passed to the getFullMessage function.
-   * @returns The function `getFullMessage` is returning a string that includes either the
+   * @returns {string} The function `getFullMessage` is returning a string that includes either the
   `init_prompt` or `next_prompt` property of the current object instance, followed by a new line and
   the `message` parameter (if provided).
    */
@@ -294,18 +294,13 @@ class Agent {
       return `${this.next_prompt}\n\n${message || ''}`
     }
   }
-
   /**
-   * @typedef {Object} ChatObject
-   * @property {string|null} [message]
-   * @property {boolean} [run_tool]
-   */
-
-  /**
-   * This is a function for a chatbot agent that processes user messages, runs staging tools, and
-   * generates responses using a language model.
-   * @param {ChatObject} chatObject
-   * @returns the parsed response from the model's chat method, which is either an object or a string.
+   * This is a function for a chatbot agent that handles user messages, runs a language model to
+   * generate a response, and can stage and run tools based on the response.
+   * @param {{message: string|null; run_tool: boolean;}} object {message: string|null; run_tool: boolean;}
+   * @returns The function `chat()` returns a Promise that resolves to the reply message from the
+   * agent's conversation with the user, or an error message if an error occurs during the
+   * conversation.
    */
   async chat({ message = null, run_tool = false }) {
     if (this.state === AgentStates.STOP) {
@@ -361,59 +356,63 @@ class Agent {
     })
 
     // Check if tool not available, and if agent is trying to use the unavailable tool again, assert as user
-    let remindAgent = false
-    let modifiedPrompt = [...full_prompt]
-    if (
-      typeof this.tool_response === 'string' &&
-      this.tool_response.includes(
-        'is not available. Please choose a different command.'
-      )
-    ) {
-      let lastResponse
-      for (let i = modifiedPrompt.length - 1; i >= 0; i--) {
-        if (modifiedPrompt[i].role === 'assistant') {
-          lastResponse = JSON.parse(modifiedPrompt[i].content)
-          break
-        }
-      }
+    // let remindAgent = false
+    // let modifiedPrompt = [...full_prompt]
+    // if (
+    //   typeof this.tool_response === 'string' &&
+    //   this.tool_response.includes(
+    //     'is not available. Please choose a different command.'
+    //   )
+    // ) {
+    //   let lastResponse
+    //   for (let i = modifiedPrompt.length - 1; i >= 0; i--) {
+    //     if (modifiedPrompt[i].role === 'assistant') {
+    //       lastResponse = JSON.parse(modifiedPrompt[i].content)
+    //       break
+    //     }
+    //   }
 
-      let toolId = lastResponse?.command?.name || 'unknown tool'
+    //   let toolId = lastResponse?.command?.name || 'unknown tool'
 
-      if (toolId === this.staging_tool?.name) {
-        const remindAsUser = {
-          role: 'user',
-          content: `Reminder: The tool "${toolId}" is not available. Please choose a different command.`,
-        }
+    //   if (toolId === this.staging_tool?.name) {
+    //     const remindAsUser = {
+    //       role: 'user',
+    //       content: `Reminder: The tool "${toolId}" is not available. Please choose a different command.`,
+    //     }
 
-        // Find the index of the last user message
-        let lastUserIndex = -1
-        for (let i = modifiedPrompt.length - 1; i >= 0; i--) {
-          if (modifiedPrompt[i].role === 'user') {
-            lastUserIndex = i
-            break
-          }
-        }
+    //     // Find the index of the last user message
+    //     let lastUserIndex = -1
+    //     for (let i = modifiedPrompt.length - 1; i >= 0; i--) {
+    //       if (modifiedPrompt[i].role === 'user') {
+    //         lastUserIndex = i
+    //         break
+    //       }
+    //     }
 
-        if (lastUserIndex !== -1) {
-          // Replace the last user message with the modified message
-          modifiedPrompt[lastUserIndex] = remindAsUser
-          remindAgent = true
-        }
-      }
-    }
+    //     if (lastUserIndex !== -1) {
+    //       // Replace the last user message with the modified message
+    //       modifiedPrompt[lastUserIndex] = remindAsUser
+    //       remindAgent = true
+    //     }
+    //   }
+    // }
 
-    const resp = await this.model.chat(
-      !remindAgent ? full_prompt : modifiedPrompt,
-      {
-        max_tokens,
-        temperature: this.temperature,
-      }
-    )
+    // const resp = await this.model.chat(
+    //   !remindAgent ? full_prompt : modifiedPrompt,
+    //   {
+    //     max_tokens,
+    //     temperature: this.temperature,
+    //   }
+    // )
+
+    const resp = await this.model.chat(full_prompt, {
+      max_tokens,
+      temperature: this.temperature,
+    })
 
     let reply
     let error
     let usage
-    // try {
 
     if (resp?.choices) {
       reply = resp.choices[0].message.content
@@ -533,12 +532,14 @@ class Agent {
               .toLowerCase()
               .includes('currently overloaded with other requests')
           ) {
-            // attempt retry in `n` seconds
+            // attempt retry in 15 seconds
           }
         }
 
         if (code === 'context_length_exceeded') {
-          // handle context length exceeded
+          // the current token counting method should prevent this from occuring, else:
+          console.error(code, { context: full_prompt })
+          throw Error(code)
         }
 
         if (type === 'tokens') {
@@ -694,12 +695,14 @@ class Agent {
     }
 
     prompt.push(
-      `${this.#tools.length + 1}. ${taskCompleteCommand.name}: ${taskCompleteCommand.description
+      `${this.#tools.length + 1}. ${taskCompleteCommand.name}: ${
+        taskCompleteCommand.description
       }`
     )
 
     prompt.push(
-      `${this.#tools.length + 2}. ${doNothingCommand.name}: ${doNothingCommand.description
+      `${this.#tools.length + 2}. ${doNothingCommand.name}: ${
+        doNothingCommand.description
       }`
     )
 
@@ -750,7 +753,7 @@ class Agent {
               if (try_gpt) {
                 s = await this.extractJsonWithGpt(s)
                 try {
-                  return s
+                  return JSON.parse(s)
                 } catch (error) {
                   return this.loadJson(s, false)
                 }
@@ -766,45 +769,48 @@ class Agent {
   }
 
   /**
-   * The function extracts a JSON string from a given string using GPT.
-   * @param {any} s - The input string that needs to be converted to a JSON string.
+   * The function extracts JSON from a given string using GPT.
+   * @param {string} s - The parameter `s` is a string that represents the input data that needs to be converted
+   * to a JSON string.
    * @returns The function `extractJsonWithGpt` is returning the result of calling `this.model.chat`
-  with the provided arguments. The result of this call is not shown in the code snippet, but it is
-  likely a Promise that resolves to the response generated by the GPT model.
+   * with a set of messages, a temperature of 0.0, and a maximum number of tokens to generate. The
+   * messages include a system message with a JavaScript function and a default response format, and a
+   * user message `s`.
    */
   async extractJsonWithGpt(s) {
     const func = `function convertToJson(response) {
       // Implement the logic to convert the given string to a JSON string
       // of the desired format
-      // Ensure the result can be parsed by JSON.parse
       // Return the JSON string
     }`
-
-    const desc = `Convert the given string to a JSON string of the form
-  ${JSON.stringify(DEFAULT_RESPONSE_FORMAT, null, 4)}
-  Ensure the result can be parsed by JSON.parse.`
-
-    const args = [s]
 
     const msgs = [
       {
         role: 'system',
-        content: `You are now the following JavaScript function:\n\n${func}\n\nOnly respond with your 'return' value.`,
+        content: `You are now the following JavaScript function:\n\n${func}\n\n${JSON.stringify(
+          DEFAULT_RESPONSE_FORMAT
+        )}`,
       },
-      { role: 'user', content: args.join(', ') },
+      { role: 'user', content: s },
     ]
 
     // @ts-ignore
-    const token_count = await this.model.countPromptTokens(message)
+    const token_count = await this.model.countPromptTokens(msgs)
     const token_limit = this.model.getTokenLimit()
     // @ts-ignore
     const max_tokens = Math.min(1000, Math.max(token_limit - token_count, 0))
 
-    return this.model.chat({
+    const results = await this.model.chat({
       messages: msgs,
       temperature: 0.0,
       max_tokens,
     })
+
+    if (results?.choices[0]) {
+      return results.choices[0].message.content
+    } else {
+      throw Error('Unable to obtain results of "convertToJson"')
+    }
   }
 
   /**

@@ -2,8 +2,7 @@ const Agent = require('../agent.js').Agent
 const BaseTool = require('./baseToolClass.js')
 const Summarizer = require('../utils/summarizer.js')
 const countTokens = require('../utils/countTokens.js')
-const openDatabase = require('../utils/openDatabase.js')
-const saveTextToIndexedDB = require('../utils/saveTextToIndexedDB.js')
+const { saveTextToIndexedDB } = require('../utils/indexedDB.js')
 
 class WebPageScraper extends BaseTool {
   static identifier = 'WebPageScraper'
@@ -256,7 +255,9 @@ class WebPageScraper extends BaseTool {
       entry += `\t${results.text}: {${results.url}} -- ${results.indexKey}\n`
       entry += '\n'
 
-      const memoryEntries = this.agent.memory.docs.filter((/** @type {string} */ doc) => doc = entry)
+      const memoryEntries = this.agent.memory.docs.filter(
+        (/** @type {string} */ doc) => (doc = entry)
+      )
       if (memoryEntries.length === 0) {
         await this.agent.memory.add(entry)
       }
@@ -266,42 +267,3 @@ class WebPageScraper extends BaseTool {
 }
 
 module.exports = WebPageScraper
-
-/**
- * Retrieves the saved text from IndexedDB using the key.
- * @param {string} storeName The name of the object store.
- * @param {string} key The key under which the text is saved.
- * @returns {Promise<{ context: object, text: string }>} The saved context and text.
- */
-async function retrieveText(storeName, key) {
-  const db = await openDatabase()
-
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(storeName, 'readonly')
-    const objectStore = transaction.objectStore(storeName)
-    const request = objectStore.get(key)
-
-    request.onsuccess = (
-      /** @type {{ target: { result: any; }; }} */ event
-    ) => {
-      // @ts-ignore
-      const data = event.target ? event.target.result : null
-      if (data) {
-        resolve(data)
-      } else {
-        reject(new Error('Text not found'))
-      }
-    }
-
-    request.onerror = (/** @type {{ target: { error: any; }; }} */ event) => {
-      // @ts-ignore
-      const error = event.target ? event.target.error : null
-      reject(
-        error ||
-        new Error(
-          'An error occurred while retrieving the text from the database.'
-        )
-      )
-    }
-  })
-}

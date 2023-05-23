@@ -1,6 +1,6 @@
 const Agent = require('../agent.js').Agent
 const BaseTool = require('./baseToolClass.js')
-const saveTextToIndexedDB = require('../utils/saveTextToIndexedDB.js')
+const { saveTextToIndexedDB } = require('../utils/indexedDB.js')
 
 class WebSearch extends BaseTool {
   static identifier = 'WebSearch'
@@ -39,7 +39,7 @@ class WebSearch extends BaseTool {
       // @ts-ignore
       this.googleApiKey
       // @ts-ignore
-      }&cx=${this.googleCxId}&q=${encodeURIComponent(query)}`
+    }&cx=${this.googleCxId}&q=${encodeURIComponent(query)}`
     const response = await fetch(apiUrl)
     const data = await response.json()
     let resultsSummary
@@ -90,7 +90,9 @@ class WebSearch extends BaseTool {
         entry += `\t${title}: ${link} -- id:${indexKey}\n`
         entry += '\n'
 
-        const memoryEntries = this.agent.memory.docs.filter((/** @type {string} */ doc) => doc = entry)
+        const memoryEntries = this.agent.memory.docs.filter(
+          (/** @type {string} */ doc) => (doc = entry)
+        )
         if (memoryEntries.length === 0) {
           await this.agent.memory.add(entry)
         }
