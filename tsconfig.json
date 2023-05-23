@@ -112,7 +112,7 @@
     "src/agent.js",
     "src/constants.js",
     "src/openAIModel.js",
-    "src/localMemory.js",
+    "src/memory/localMemory.js",
     "src/embeddings/openai.js",
     "src/tools.js",
     "src/tools/baseToolClass.js",

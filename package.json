@@ -10,7 +10,8 @@
   "scripts": {
     "prettier": "npx prettier --write --no-semi --single-quote \"**/*.{js,md}\"",
     "validate": "tsc",
-    "build": "webpack --mode production"
+    "build": "webpack --mode production",
+    "generate-docs": "node jsdoc -c ./jsdoc.conf.json -r ./README.md"
   },
   "keywords": [
     "loopgpt",

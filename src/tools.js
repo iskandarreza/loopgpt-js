@@ -1,9 +1,20 @@
 const WebSearch = require('./tools/webSearch.js')
 const WebPageScraper = require('./tools/webPageScraper.js')
+/**
+ * Abstract base class for tools.
+ * @typedef {Object} BaseTool
+ * @property {Function} constructor - The constructor function of the base tool.
+ * @property {string} id - The unique identifier for the tool.
+ * @property {string} desc - The description of the tool.
+ * @property {Object.<string, string>} args - Dictionary of arguments for the tool.
+ * @property {Object.<string, string>} resp - Response format of the tool.
+ * @property {Function} prompt - Returns the tool information as a JSON string.
+ * @property {Function} config - Returns the configuration object for the tool.
+ */
 
 class Tools {
   /**
-   * @param {{ name: any; }} classToSet
+   * @param {{ name: any }} classToSet
    */
   setToolId(classToSet) {
     Object.defineProperty(classToSet, 'toolId', {
@@ -15,7 +26,7 @@ class Tools {
 
   /**
    * @param {typeof WebPageScraper} classToSet
-   * @param {{ apiKey: string; }} keys
+   * @param {{ apiKey: string }} keys
    */
   addOpenAIKey(classToSet, keys) {
     Object.defineProperty(classToSet.prototype, 'openaiApiKey', {
@@ -27,7 +38,7 @@ class Tools {
 
   /**
    * @param {typeof WebSearch} classToSet
-   * @param {{ googleApiKey: string; googleCxId: string; }} keys
+   * @param {{ googleApiKey: string, googleCxId: string }} keys
    */
   addGoogleKeys(classToSet, keys) {
     // @ts-ignore
@@ -46,10 +57,7 @@ class Tools {
 
   /**
    * The function returns an array of browsing tools.
-   * @param {object} [keys]
-   * @param {{ googleApiKey: string; googleCxId: string; }} keys.google
-   * @param {object} keys.openai
-   * @param {string} keys.openai.apiKey
+   * @param {{google: { googleApiKey: string, googleCxId: string }, openai: {apiKey: string}}} [keys]
    * @returns {Array<any>} An array of browsing tools, which includes WebSearch and Browser.
    */
   browsingTools(keys) {

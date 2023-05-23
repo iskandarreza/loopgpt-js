@@ -3,14 +3,14 @@ const countTokens = require('./countTokens.js')
 /**
  * This function optimizes a chat history by removing duplicate system messages and limiting the total
  * number of tokens in the optimized history.
- * @param {{role: string; content: string;}[]} history - The `history` parameter is an array of objects representing messages in a
+ * @param {Array<{role: string, content: string}>} history - The `history` parameter is an array of objects representing messages in a
  * conversation. Each object has two properties: `role` (a string representing the role of the message
  * sender, e.g. "user" or "bot") and `content` (a string representing the message content). The array
  * @param {number} maxTokens - The `maxTokens` parameter is a number that represents the maximum number of
  * tokens (a unit of measurement for text length) allowed in the optimized history context. The
  * function will stop adding messages to the optimized history once the total number of tokens exceeds
  * this value.
- * @returns {Promise<{role: string; content: string;}[]>} an array of message objects that have been optimized based on their content length and the
+ * @returns {Promise<Array<{role: string, content: string}>>} an array of message objects that have been optimized based on their content length and the
  * maximum token limit.
  */
 async function optimizeContext(history, maxTokens) {
@@ -18,7 +18,7 @@ async function optimizeContext(history, maxTokens) {
   const optimizedHistory = []
 
   /**
-   * @type {{role: string; content: string;}[]}
+   * @type {Array<{role: string, content: string}>}
    */
   const uniqueHistory = []
   for (let i = history.length - 1; i >= 0; i--) {
