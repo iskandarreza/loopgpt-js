@@ -1,8 +1,4 @@
-// loopgpt/memory/localMemory.js
 const { BaseMemory } = require('./baseMemoryClass.js')
-// const {
-//   fromConfig: embeddingProviderFromConfig,
-// } = require('../embeddings/embeddings.js')
 
 class LocalMemory extends BaseMemory {
   /**

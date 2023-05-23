@@ -1,4 +1,3 @@
-// loopgpt/embeddings.js
 const { BaseEmbeddingProvider } = require('../embeddings/provider.js')
 
 const userProviders = {}

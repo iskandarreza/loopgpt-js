@@ -1,4 +1,3 @@
-// loopgpt/embeddings/provider.js
 class BaseEmbeddingProvider {
   /**
    * Base class for all embedding providers.

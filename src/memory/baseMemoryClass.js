@@ -1,4 +1,3 @@
-// loopgpt/memory/baseMemory.js
 class BaseMemory {
   /**
    * Adds a document to the memory
